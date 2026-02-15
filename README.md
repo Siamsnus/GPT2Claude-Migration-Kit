@@ -37,13 +37,53 @@ var s=document.createElement('script');s.src='https://raw.githubusercontent.com/
 
 ## Importing to Claude
 
-Upload the exported files to [claude.ai](https://claude.ai) and use this prompt:
+Upload the exported files to [claude.ai](https://claude.ai) in this order:
 
-> I just migrated from ChatGPT. Please parse these files, remember the key facts about me, and summarize my most important conversations.
+### Step 1: Memories first
+Upload `chatgpt_memories.md` with this prompt:
 
-- **Memories** → Claude stores as persistent memory
-- **Conversations** → Claude extracts key topics, decisions, and context
-- **Instructions** → Claude matches your preferred interaction style
+> I just migrated from ChatGPT. This file contains all the facts and memories ChatGPT had stored about me. Please read through every item carefully and remember all of these facts about me. Confirm what you've learned and note if anything seems contradictory or outdated.
+
+### Step 2: Conversations
+Upload `chatgpt_all_conversations.json` with this prompt:
+
+> This is my complete ChatGPT conversation history. Please analyze it and create a structured summary: (1) Key ongoing projects or topics I frequently discussed, (2) Important decisions or conclusions we reached, (3) Any personal context like my profession, interests, communication style, and preferences, (4) Anything time-sensitive or unfinished that I should pick up.
+
+**Large files:** If the JSON is too big to upload (100MB+), zip it first. Claude accepts `.zip` uploads. Right-click → Send to → Compressed (zipped) folder on Windows, or Compress on Mac.
+
+### Step 3: Instructions
+Upload `chatgpt_instructions.json` with this prompt:
+
+> These are my custom instructions and settings from ChatGPT. Please review them and adapt your communication style to match my preferences. Let me know what you've noted about how I like to interact.
+
+### Pro tip
+If you used ChatGPT mostly for casual chats and only need to migrate work-related context, just upload the memories file. That gives Claude the core facts without cluttering it with thousands of irrelevant conversations. Quality beats quantity.
+
+## What to expect after migrating
+
+**Claude remembers the facts but needs time to know *you*.**
+
+Think of it like switching doctors. The new doctor has your complete medical file — every test, every diagnosis, every note. But they don't *know* you yet. They don't know you downplay pain, or that "I'm fine" means you're not. That takes a few visits.
+
+Claude gets roughly **70% of what ChatGPT knew** from the import — all the facts, topics, and history. The remaining 30% is personal calibration: your communication style, when you want detail vs. brevity, your sense of humor, what matters most to you. That builds naturally over a couple of weeks of real conversations.
+
+**The good news:** if you've changed since you started using ChatGPT, Claude calibrates to who you are *now*, not who you were two years ago. A fresh calibration can actually be better than inherited habits.
+
+### Example conversations after import
+
+```
+You:   "Do you remember that legal case I was working on?"
+Claude: "Yes — case T 7634-25 at Attunda tingsrätt. You were developing
+         jurisdiction arguments based on Hague Convention Article 5
+         regarding habitual residence. Want to pick up where we left off?"
+
+You:   "What was my main project at work?"
+Claude: "You were building a dashboard for the Q3 sales pipeline using
+         React and Supabase. Last time we discussed it you were stuck
+         on the authentication flow. Should we debug that?"
+```
+
+Claude has access to everything you imported. Ask it about any topic from your ChatGPT history and it can find it — either from stored memory or by searching your past conversations.
 
 ## How it works
 
@@ -67,12 +107,17 @@ No data is sent anywhere. Files are saved directly to your Downloads folder.
 
 - Uses undocumented OpenAI endpoints that may change without notice
 - Large accounts (1000+ conversations) may take 15-30 minutes
+- Large exports may need to be zipped before uploading to Claude (right-click → compress)
 - Rate limiting may occur — the tool handles this automatically with retry logic
 - This tool is not affiliated with OpenAI or Anthropic
 
 ## Why this exists
 
-OpenAI retired GPT-4o without a migration path. Many users lost years of context, memories, and conversation history with no way to export their data to another platform. This tool fills that gap.
+OpenAI retired GPT-4o without a migration path. Many users lost years of context, memories, and conversation history with no way to export their data to another platform.
+
+Existing browser extensions can export conversations as formatted text, but none of them export **memory items** (the facts ChatGPT learned about you), **custom instructions**, or **message-level metadata** (timestamps, model used, role attribution). This tool exports everything — the actual data structures needed for a real migration, not just a printout.
+
+Your data. Your choice where it lives.
 
 ## Contributing
 

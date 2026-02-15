@@ -406,6 +406,64 @@
     </div>
   </div>
 
+  <!-- IMPORTING TO CLAUDE -->
+  <div class="exports-section" id="importing">
+    <h2>Importing to Claude</h2>
+
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num s1">1</div>
+        <div class="step-text">
+          <h3>Upload your memory file first</h3>
+          <p>Upload <strong>chatgpt_memories.md</strong> to Claude and use this prompt:</p>
+          <p style="color:var(--accent); margin-top:0.5rem; font-style:italic;">"I just migrated from ChatGPT. This file contains all the facts and memories ChatGPT had stored about me. Please read through every item carefully and remember all of these facts about me. Confirm what you've learned and note if anything seems contradictory or outdated."</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num s2">2</div>
+        <div class="step-text">
+          <h3>Upload your conversations</h3>
+          <p>Upload <strong>chatgpt_all_conversations.json</strong> (zip it first if it's large) and use this prompt:</p>
+          <p style="color:var(--accent); margin-top:0.5rem; font-style:italic;">"This is my complete ChatGPT conversation history. Please analyze it and create a structured summary: (1) Key ongoing projects or topics I frequently discussed, (2) Important decisions or conclusions we reached, (3) Any personal context like my profession, interests, communication style, and preferences, (4) Anything time-sensitive or unfinished that I should pick up."</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num s3">3</div>
+        <div class="step-text">
+          <h3>Upload your instructions</h3>
+          <p>Upload <strong>chatgpt_instructions.json</strong> and use this prompt:</p>
+          <p style="color:var(--accent); margin-top:0.5rem; font-style:italic;">"These are my custom instructions and settings from ChatGPT. Please review them and adapt your communication style to match my preferences. Let me know what you've noted about how I like to interact."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHAT TO EXPECT -->
+  <div class="exports-section" id="expectations">
+    <h2>What to expect after migrating</h2>
+
+    <div class="fallback-box" style="margin-bottom:1rem;">
+      <h3>Claude remembers the facts, but needs time to know <em>you</em></h3>
+      <p>Think of it like switching doctors. The new doctor has your complete medical file &mdash; every test, every diagnosis, every note. But they don't <em>know</em> you yet. They don't know you downplay pain, or that "I'm fine" means you're not. That takes a few visits.</p>
+      <p>Claude gets roughly <strong>70% of what ChatGPT knew</strong> from the import &mdash; all the facts, topics, and history. The remaining 30% is personal calibration: your communication style, when you want detail vs. brevity, your sense of humor, what matters most to you. That builds naturally over a couple of weeks of real conversations.</p>
+      <p style="margin-bottom:0;"><strong>The good news:</strong> if you've changed since you started using ChatGPT, Claude calibrates to who you are <em>now</em>, not who you were two years ago. A fresh calibration can actually be better than inherited habits.</p>
+    </div>
+
+    <div class="fallback-box" style="margin-bottom:1rem;">
+      <h3>Example: what conversations look like after import</h3>
+      <p style="margin-bottom:0.5rem; color:var(--text);"><strong>You:</strong> "Do you remember that legal case I was working on?"</p>
+      <p style="margin-bottom:0.75rem; color:var(--accent);"><strong>Claude:</strong> "Yes — case T 7634-25 at Attunda tingsrätt. You were developing jurisdiction arguments based on Hague Convention Article 5 regarding habitual residence. Want to pick up where we left off?"</p>
+      <p style="margin-bottom:0.5rem; color:var(--text);"><strong>You:</strong> "What was my main project at work?"</p>
+      <p style="margin-bottom:0.75rem; color:var(--accent);"><strong>Claude:</strong> "You were building a dashboard for the Q3 sales pipeline using React and Supabase. Last time we discussed it you were stuck on the authentication flow. Should we debug that?"</p>
+      <p style="margin-bottom:0;">Claude has access to everything you imported. Ask it about any topic from your ChatGPT history and it can find it — either from stored memory or by searching your past conversations.</p>
+    </div>
+
+    <div class="fallback-box">
+      <h3>Pro tip: don't import everything if you don't need to</h3>
+      <p style="margin-bottom:0;">If you used ChatGPT mostly for casual chats and only need to migrate work-related context, just upload the memories file. That gives Claude the core facts without thousands of irrelevant conversations. You can always upload conversations later if needed. Quality beats quantity &mdash; a focused memory is more useful than a cluttered one.</p>
+    </div>
+  </div>
+
   <!-- FAQ -->
   <div class="faq">
     <h2>Common questions</h2>
@@ -427,7 +485,12 @@
 
     <div class="faq-item">
       <h3>What do I do with the files once exported?</h3>
-      <p>Go to <a href="https://claude.ai" style="color:var(--accent)">claude.ai</a>, upload the files, and ask Claude to parse them. Start with: <em>"I just migrated from ChatGPT. Please parse these files, remember the key facts about me, and summarize my most important conversations."</em></p>
+      <p>Go to <a href="https://claude.ai" style="color:var(--accent)">claude.ai</a> and upload the files. See the <strong>"Importing to Claude"</strong> section below for detailed prompts and what to expect.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>The file is too large to upload</h3>
+      <p>If you have hundreds or thousands of conversations, the JSON file can be huge (100MB+). Zip it first &mdash; Claude accepts .zip uploads. Right-click the file &rarr; <strong>Send to &rarr; Compressed (zipped) folder</strong> on Windows, or <strong>Compress</strong> on Mac.</p>
     </div>
 
     <div class="faq-item">
