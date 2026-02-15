@@ -92,6 +92,13 @@
           <div class="g2c-btn-sub">Custom instructions &amp; settings</div>\
         </div>\
       </button>\
+      <button class="g2c-btn" id="g2c-btn-all" style="border-color:#d4a574;background:#141416;">\
+        <div class="g2c-btn-icon">\uD83D\uDCE5</div>\
+        <div class="g2c-btn-text">\
+          <span style="color:#d4a574;">Export Everything</span>\
+          <div class="g2c-btn-sub">All three in one click</div>\
+        </div>\
+      </button>\
       <div class="g2c-progress" id="g2c-progress" style="display:none;">\
         <div class="g2c-progress-bar"><div class="g2c-progress-fill" id="g2c-progress-fill"></div></div>\
         <div class="g2c-progress-text" id="g2c-progress-text"></div>\
@@ -442,6 +449,9 @@
           if (resp.status === 200) {
             result.data[ep.name] = await resp.json();
             log("Got: " + ep.name);
+          } else if (resp.status === 404) {
+            result.data[ep.name] = {note: "Not available on this account"};
+            log(ep.name + ": not available (skipped)");
           } else {
             result.data[ep.name] = {error: "HTTP " + resp.status};
             log(ep.name + ": HTTP " + resp.status, "error");
@@ -470,6 +480,17 @@
   document.getElementById("g2c-btn-memory").addEventListener("click", exportMemories);
   document.getElementById("g2c-btn-convos").addEventListener("click", exportConversations);
   document.getElementById("g2c-btn-instructions").addEventListener("click", exportInstructions);
+
+  document.getElementById("g2c-btn-all").addEventListener("click", async function() {
+    var btn = document.getElementById("g2c-btn-all");
+    setButtonState(btn, "running", "Exporting everything...");
+    log("--- EXPORT ALL started ---");
+    await exportMemories();
+    await exportInstructions();
+    await exportConversations();
+    setButtonState(btn, "done", "All exports complete!");
+    log("--- EXPORT ALL finished ---", "success");
+  });
 
   document.getElementById("g2c-toggle-log").addEventListener("click", function() {
     var logVisible = logEl.classList.contains("visible");
