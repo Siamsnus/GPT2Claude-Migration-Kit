@@ -212,18 +212,19 @@ function loadFile(file) {
 
 function processData(data) {
   // Handle both migration kit format and official ChatGPT export
+  var raw = [];
   if (Array.isArray(data)) {
     // Official export: array of conversations
-    conversations = data;
+    raw = data;
   } else if (data.conversations && Array.isArray(data.conversations)) {
     // Migration kit: {conversations: [...]}
-    conversations = data.conversations;
+    raw = data.conversations;
   } else if (data.data && Array.isArray(data.data)) {
-    conversations = data.data;
+    raw = data.data;
   } else {
     // Maybe it's a single conversation
-    if (data.mapping && data.title) {
-      conversations = [data];
+    if (data.title) {
+      raw = [data];
     } else {
       alert("Unrecognized format. Expected a conversations JSON file.");
       location.reload();
@@ -231,19 +232,40 @@ function processData(data) {
     }
   }
 
-  // Parse and normalize
-  conversations = conversations.map(function(c) {
+  // Parse and normalize — handle both pre-flattened (migration kit) and raw (mapping) formats
+  conversations = raw.map(function(c) {
+    var msgs;
+
+    if (c.messages && Array.isArray(c.messages)) {
+      // Migration kit format: messages already flattened with {role, content, timestamp, model}
+      msgs = c.messages.map(function(m) {
+        return {
+          role: m.role || "unknown",
+          text: m.content || m.text || "",
+          timestamp: m.timestamp || 0,
+          model: m.model || ""
+        };
+      });
+    } else if (c.mapping) {
+      // Raw ChatGPT format: tree structure needs flattening
+      msgs = flattenMessages(c.mapping);
+    } else {
+      msgs = [];
+    }
+
     return {
       id: c.id || c.conversation_id || Math.random().toString(36).substr(2),
       title: c.title || "Untitled",
       create_time: c.create_time || 0,
       update_time: c.update_time || c.create_time || 0,
-      mapping: c.mapping || {},
-      model: extractModel(c),
-      messageCount: countMessages(c.mapping || {}),
-      messages: flattenMessages(c.mapping || {})
+      model: c.model || c.default_model_slug || extractModel(c),
+      messageCount: c.message_count || msgs.length,
+      messages: msgs
     };
   });
+
+  // Filter out conversations with errors and no messages
+  var withErrors = conversations.filter(function(c) { return c.messageCount === 0; }).length;
 
   // Show UI
   dropZone.style.display = "none";
@@ -252,8 +274,9 @@ function processData(data) {
 
   // Stats
   var totalMsgs = conversations.reduce(function(sum, c) { return sum + c.messageCount; }, 0);
-  document.getElementById("sidebar-stats").textContent =
-    conversations.length + " conversations · " + totalMsgs.toLocaleString() + " messages";
+  var statsText = conversations.length + " conversations · " + totalMsgs.toLocaleString() + " messages";
+  if (withErrors > 0) statsText += " · " + withErrors + " empty";
+  document.getElementById("sidebar-stats").textContent = statsText;
 
   renderConversationList();
   setupSearch();
@@ -363,7 +386,7 @@ function renderConversationList(filter) {
   var html = "";
   for (var i = 0; i < sorted.length; i++) {
     var c = sorted[i];
-    var date = c.update_time ? new Date(c.update_time * 1000).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"}) : "";
+    var date = formatDate(c.update_time || c.create_time);
     var preview = "";
     if (c.messages.length > 0) {
       preview = c.messages[0].text.substring(0, 80).replace(/\n/g, " ");
@@ -395,7 +418,7 @@ function openConversation(id) {
 
   // Header
   document.getElementById("chat-title").textContent = c.title;
-  var dateStr = c.create_time ? new Date(c.create_time * 1000).toLocaleDateString("en-US", {weekday:"short", month:"short", day:"numeric", year:"numeric"}) : "";
+  var dateStr = formatDateLong(c.create_time);
   document.getElementById("chat-meta").textContent = dateStr + (c.model !== "unknown" ? " · " + c.model : "") + " · " + c.messageCount + " messages";
 
   // Messages
@@ -412,7 +435,7 @@ function openConversation(id) {
     else roleClass = "tool";
 
     var avatar = role === "user" ? "Y" : role === "assistant" ? "AI" : role === "system" ? "S" : "T";
-    var time = m.timestamp ? new Date(m.timestamp * 1000).toLocaleString("en-US", {hour:"numeric", minute:"2-digit", month:"short", day:"numeric"}) : "";
+    var time = formatDateTime(m.timestamp);
 
     html += '<div class="message ' + roleClass + '">' +
       '<div class="msg-avatar">' + avatar + '</div>' +
@@ -474,7 +497,7 @@ function runSearch(query) {
           convoTitle: c.title,
           role: m.role,
           snippet: snippet,
-          date: c.update_time ? new Date(c.update_time * 1000).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"}) : ""
+          date: formatDate(c.update_time)
         });
 
         if (results.length >= 100) break;
@@ -532,6 +555,31 @@ function toggleSidebar() {
 function escHtml(s) {
   if (!s) return "";
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function formatDate(ts) {
+  if (!ts) return "";
+  // Handle seconds vs milliseconds
+  var ms = ts > 1e12 ? ts : ts * 1000;
+  var d = new Date(ms);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"});
+}
+
+function formatDateTime(ts) {
+  if (!ts) return "";
+  var ms = ts > 1e12 ? ts : ts * 1000;
+  var d = new Date(ms);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-US", {hour:"numeric", minute:"2-digit", month:"short", day:"numeric"});
+}
+
+function formatDateLong(ts) {
+  if (!ts) return "";
+  var ms = ts > 1e12 ? ts : ts * 1000;
+  var d = new Date(ms);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", {weekday:"short", month:"short", day:"numeric", year:"numeric"});
 }
 </script>
 </body>
