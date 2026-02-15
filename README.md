@@ -18,6 +18,17 @@ Export everything from ChatGPT — memories, conversations, and custom instructi
 
 No existing browser extension exports memory items or custom instructions. This tool does.
 
+## Browse your export
+
+Don't want to read raw JSON? Open **[viewer.html](https://siamsnus.github.io/GPT2Claude-Migration-Kit/viewer.html)** in your browser. Drag your exported conversations file into it to:
+
+- Browse all conversations by title and date
+- Sort by newest, oldest, alphabetical, or longest
+- Search across all messages instantly
+- Read conversations in a familiar chat format
+
+Everything runs locally — no data is uploaded anywhere.
+
 ## How to use
 
 ### Option A: Bookmarklet (easiest)
