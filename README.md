@@ -27,13 +27,12 @@ No existing browser extension exports memory items or custom instructions. This 
 4. Click the bookmark — a floating export panel appears
 5. Click the export buttons — files download automatically
 
-### Option B: Console (if bookmarklet doesn't work)
-1. Go to [chatgpt.com](https://chatgpt.com) and log in
-2. Press `F12` → click **Console** tab
-3. Paste this and press Enter:
-```js
-fetch('https://raw.githubusercontent.com/Siamsnus/GPT2Claude-Migration-Kit/main/migrate.js?v='+Date.now()).then(r=>r.text()).then(t=>{var b=new Blob([t],{type:'application/javascript'});var u=URL.createObjectURL(b);var s=document.createElement('script');s.src=u;document.head.appendChild(s)})
-```
+### Option B: Console paste (if bookmarklet doesn't work)
+1. Go to the [landing page](https://siamsnus.github.io/GPT2Claude-Migration-Kit) and click **"Copy full script to clipboard"**
+2. Go to [chatgpt.com](https://chatgpt.com) and log in
+3. Press `F12` → click **Console** tab
+4. Paste (`Ctrl+V`) and press Enter
+5. The export panel appears on the page
 
 ## Importing to Claude
 
