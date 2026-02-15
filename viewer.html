@@ -257,7 +257,7 @@ function processData(data) {
   }
 
   // Parse and normalize — handle both pre-flattened (migration kit) and raw (mapping) formats
-  conversations = raw.map(function(c) {
+  conversations = raw.map(function(c, idx) {
     var msgs;
 
     if (c.messages && Array.isArray(c.messages)) {
@@ -277,11 +277,27 @@ function processData(data) {
       msgs = [];
     }
 
+    // Get timestamps - fall back to first/last message times if needed
+    var createTime = Number(c.create_time) || 0;
+    var updateTime = Number(c.update_time) || 0;
+    if (!createTime && msgs.length > 0) {
+      for (var ti = 0; ti < msgs.length; ti++) {
+        if (msgs[ti].timestamp) { createTime = Number(msgs[ti].timestamp) || 0; break; }
+      }
+    }
+    if (!updateTime && msgs.length > 0) {
+      for (var ti = msgs.length - 1; ti >= 0; ti--) {
+        if (msgs[ti].timestamp) { updateTime = Number(msgs[ti].timestamp) || 0; break; }
+      }
+    }
+    if (!updateTime) updateTime = createTime;
+
     return {
       id: c.id || c.conversation_id || Math.random().toString(36).substr(2),
       title: c.title || "Untitled",
-      create_time: c.create_time || 0,
-      update_time: c.update_time || c.create_time || 0,
+      create_time: createTime,
+      update_time: updateTime,
+      _index: idx,
       model: c.model || c.default_model_slug || extractModel(c),
       messageCount: c.message_count || msgs.length,
       messages: msgs
@@ -393,9 +409,15 @@ function renderConversationList(filter) {
   var list = document.getElementById("convo-list");
   var sorted = conversations.slice();
 
-  // Sort
-  if (currentSort === "newest") sorted.sort(function(a,b) { return (b.update_time || 0) - (a.update_time || 0); });
-  else if (currentSort === "oldest") sorted.sort(function(a,b) { return (a.create_time || 0) - (b.create_time || 0); });
+  // Sort — use original array index as fallback (API returns newest first)
+  if (currentSort === "newest") sorted.sort(function(a,b) {
+    var diff = (b.update_time || 0) - (a.update_time || 0);
+    return diff !== 0 ? diff : a._index - b._index;
+  });
+  else if (currentSort === "oldest") sorted.sort(function(a,b) {
+    var diff = (a.create_time || 0) - (b.create_time || 0);
+    return diff !== 0 ? diff : b._index - a._index;
+  });
   else if (currentSort === "alpha") sorted.sort(function(a,b) { return a.title.localeCompare(b.title); });
   else if (currentSort === "longest") sorted.sort(function(a,b) { return b.messageCount - a.messageCount; });
 
