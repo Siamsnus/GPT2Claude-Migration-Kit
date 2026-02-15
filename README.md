@@ -135,6 +135,12 @@ Existing browser extensions can export conversations as formatted text, but none
 
 Your data. Your choice where it lives.
 
+## Planned features
+
+- **Image export** — Download images (uploaded photos, DALL-E generations) referenced in conversations. Currently the JSON contains image references but not the actual files. This would add a separate "Export Images" button that fetches them from OpenAI's CDN using your authenticated session. PRs welcome.
+- **Memory viewer** — Browse and search exported memory items in the viewer
+- **Import to other platforms** — Tested import prompts for Gemini, Copilot, etc.
+
 ## Contributing
 
 Found a bug? Endpoint changed? PRs welcome. This is a community tool.
