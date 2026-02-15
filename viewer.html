@@ -66,7 +66,9 @@
   .message.assistant .msg-avatar { background: var(--gpt-dim); color: var(--gpt); }
   .message.system .msg-avatar { background: rgba(126,184,160,0.12); color: var(--green); }
   .message.tool .msg-avatar { background: rgba(200,200,200,0.08); color: var(--text-dim); }
-  .msg-bubble { padding: 12px 16px; border-radius: 14px; font-size: 0.9rem; line-height: 1.65; max-width: 600px; word-wrap: break-word; white-space: pre-wrap; }
+  .msg-bubble { padding: 12px 16px; border-radius: 14px; font-size: 0.9rem; line-height: 1.65; max-width: 600px; word-wrap: break-word; white-space: pre-line; }
+  .msg-bubble pre { white-space: pre-wrap; margin: 8px 0; }
+  .msg-bubble strong { font-weight: 700; }
   .message.user .msg-bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; }
   .message.assistant .msg-bubble { background: var(--ai-bubble); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
   .message.system .msg-bubble { background: rgba(126,184,160,0.06); border: 1px solid rgba(126,184,160,0.15); font-style: italic; color: var(--text-dim); font-size: 0.82rem; }
@@ -392,8 +394,8 @@ function renderConversationList(filter) {
   var sorted = conversations.slice();
 
   // Sort
-  if (currentSort === "newest") sorted.sort(function(a,b) { return b.update_time - a.update_time; });
-  else if (currentSort === "oldest") sorted.sort(function(a,b) { return a.create_time - b.create_time; });
+  if (currentSort === "newest") sorted.sort(function(a,b) { return (b.update_time || 0) - (a.update_time || 0); });
+  else if (currentSort === "oldest") sorted.sort(function(a,b) { return (a.create_time || 0) - (b.create_time || 0); });
   else if (currentSort === "alpha") sorted.sort(function(a,b) { return a.title.localeCompare(b.title); });
   else if (currentSort === "longest") sorted.sort(function(a,b) { return b.messageCount - a.messageCount; });
 
@@ -410,8 +412,19 @@ function renderConversationList(filter) {
     var c = sorted[i];
     var date = formatDate(c.update_time || c.create_time);
     var preview = "";
-    if (c.messages.length > 0) {
-      preview = c.messages[0].text.substring(0, 80).replace(/\n/g, " ");
+    for (var pi = 0; pi < c.messages.length; pi++) {
+      if (!isMetadataMessage(c.messages[pi]) && c.messages[pi].role === "user") {
+        preview = c.messages[pi].text.substring(0, 80).replace(/\n/g, " ");
+        break;
+      }
+    }
+    if (!preview && c.messages.length > 0) {
+      for (var pi = 0; pi < c.messages.length; pi++) {
+        if (!isMetadataMessage(c.messages[pi])) {
+          preview = c.messages[pi].text.substring(0, 80).replace(/\n/g, " ");
+          break;
+        }
+      }
     }
     html += '<div class="convo-item" data-id="' + c.id + '" onclick="openConversation(\'' + c.id + '\')">' +
       '<div class="title">' + escHtml(c.title) + '</div>' +
@@ -449,6 +462,7 @@ function openConversation(id) {
 
   for (var i = 0; i < c.messages.length; i++) {
     var m = c.messages[i];
+    if (isMetadataMessage(m)) continue;
     var role = m.role || "unknown";
     var roleClass = role;
     if (role === "user") roleClass = "user";
@@ -461,7 +475,7 @@ function openConversation(id) {
 
     html += '<div class="message ' + roleClass + '">' +
       '<div class="msg-avatar">' + avatar + '</div>' +
-      '<div><div class="msg-bubble">' + escHtml(m.text) + '</div>' +
+      '<div><div class="msg-bubble">' + renderMarkdown(m.text) + '</div>' +
       (time ? '<div class="msg-time">' + time + '</div>' : '') +
       '</div></div>';
   }
@@ -503,6 +517,7 @@ function runSearch(query) {
     var c = conversations[i];
     for (var j = 0; j < c.messages.length; j++) {
       var m = c.messages[j];
+      if (isMetadataMessage(m)) continue;
       var idx = m.text.toLowerCase().indexOf(q);
       if (idx !== -1) {
         // Extract context around match
@@ -577,6 +592,45 @@ function toggleSidebar() {
 function escHtml(s) {
   if (!s) return "";
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function renderMarkdown(text) {
+  var s = escHtml(text);
+  // Headers
+  s = s.replace(/^### (.+)$/gm, '<strong style="font-size:1.05em;">$1</strong>');
+  s = s.replace(/^## (.+)$/gm, '<strong style="font-size:1.1em;">$1</strong>');
+  s = s.replace(/^# (.+)$/gm, '<strong style="font-size:1.15em;">$1</strong>');
+  // Bold
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Inline code
+  s = s.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;font-size:0.88em;">$1</code>');
+  // Code blocks
+  s = s.replace(/```[\w]*\n([\s\S]*?)```/g, '<pre style="background:rgba(0,0,0,0.3);padding:10px 12px;border-radius:8px;overflow-x:auto;font-size:0.85em;margin:8px 0;">$1</pre>');
+  // Lists (- or *)
+  s = s.replace(/^[\-\*] (.+)$/gm, '<span style="display:block;padding-left:1.2em;text-indent:-0.8em;">• $1</span>');
+  // Numbered lists
+  s = s.replace(/^(\d+)\. (.+)$/gm, '<span style="display:block;padding-left:1.2em;text-indent:-1.2em;">$1. $2</span>');
+  // Links
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;">$1</a>');
+  // Plain URLs
+  s = s.replace(/(^|[^"=])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;word-break:break-all;">$2</a>');
+  return s;
+}
+
+function isMetadataMessage(m) {
+  var t = m.text || m.content || "";
+  // Filter out system metadata that ChatGPT hides
+  if (t.trim().charAt(0) === '{') {
+    try {
+      var obj = JSON.parse(t.trim());
+      if (obj.content_type || obj.repository !== undefined || obj.model_set_context !== undefined || obj.structured_context !== undefined) return true;
+    } catch(e) {}
+  }
+  // Filter out empty or very short system messages
+  if ((m.role === "system" || m.role === "tool") && t.trim().length < 5) return true;
+  return false;
 }
 
 function formatDate(ts) {
