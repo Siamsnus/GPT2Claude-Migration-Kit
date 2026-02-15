@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPT→Claude Migration Kit — Export everything from ChatGPT</title>
+<meta name="description" content="Export your ChatGPT memories, conversations, and instructions. No install needed. One click, everything downloads.">
+<meta property="og:title" content="GPT→Claude Migration Kit">
+<meta property="og:description" content="Export everything from ChatGPT. No extensions, no install. One click.">
+<meta property="og:type" content="website">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08080a;
+    --surface: #111114;
+    --surface2: #18181c;
+    --border: #252530;
+    --text: #e4e4ea;
+    --text-dim: #7a7a88;
+    --accent: #d4a574;
+    --accent-glow: rgba(212, 165, 116, 0.15);
+    --gpt: #9898d4;
+    --green: #7eb8a0;
+    --red: #d47474;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.7; min-height: 100vh; overflow-x: hidden; }
+
+  /* Grain overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .container { max-width: 720px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 2; }
+
+  /* ========== HERO ========== */
+  .hero {
+    padding: 6rem 0 4rem;
+    text-align: center;
+  }
+  .hero-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-bottom: 2rem;
+    letter-spacing: 0.05em;
+  }
+  .hero h1 {
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 .gpt { color: var(--gpt); }
+  .hero h1 .arrow { color: var(--text-dim); opacity: 0.4; }
+  .hero h1 .claude { color: var(--accent); }
+  .hero p {
+    font-size: 1.1rem;
+    color: var(--text-dim);
+    max-width: 520px;
+    margin: 0 auto 3rem;
+  }
+
+  /* ========== BOOKMARKLET SECTION ========== */
+  .bookmark-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .bookmark-section::before {
+    content: "";
+    position: absolute;
+    top: -1px; left: -1px; right: -1px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gpt), var(--accent));
+    border-radius: 20px 20px 0 0;
+  }
+  .bookmark-section h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .bookmark-section .subtitle {
+    color: var(--text-dim);
+    font-size: 0.92rem;
+    margin-bottom: 2rem;
+  }
+
+  .bookmarklet-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 32px;
+    background: linear-gradient(135deg, #d4a574, #c49060);
+    color: #0a0a0b;
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 12px;
+    cursor: grab;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 20px var(--accent-glow), 0 0 0 1px rgba(212, 165, 116, 0.3);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .bookmarklet-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px var(--accent-glow), 0 0 0 1px rgba(212, 165, 116, 0.5);
+  }
+  .bookmarklet-link:active {
+    cursor: grabbing;
+    transform: scale(0.98);
+  }
+
+  .drag-hint {
+    margin-top: 1.25rem;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+  }
+  .drag-hint strong { color: var(--text); }
+
+  .drag-arrow {
+    display: block;
+    margin: 1.5rem auto 0;
+    color: var(--accent);
+    opacity: 0.5;
+    font-size: 2rem;
+    animation: bounce 2s ease-in-out infinite;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  /* ========== STEPS ========== */
+  .steps {
+    padding: 4rem 0;
+  }
+  .steps h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  .step-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .step-item {
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    transition: border-color 0.2s;
+  }
+  .step-item:hover { border-color: #353540; }
+  .step-num {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .step-num.s1 { background: rgba(152, 152, 212, 0.12); color: var(--gpt); }
+  .step-num.s2 { background: var(--accent-glow); color: var(--accent); }
+  .step-num.s3 { background: rgba(126, 184, 160, 0.12); color: var(--green); }
+  .step-text h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .step-text p { font-size: 0.88rem; color: var(--text-dim); }
+
+  /* ========== WHAT YOU GET ========== */
+  .exports-section {
+    padding: 0 0 4rem;
+  }
+  .exports-section h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  .export-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  .export-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+  .export-card .icon { font-size: 2rem; margin-bottom: 0.75rem; }
+  .export-card h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .export-card p { font-size: 0.8rem; color: var(--text-dim); }
+  .export-card .filename {
+    display: inline-block;
+    margin-top: 0.75rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 3px 10px;
+    background: var(--surface2);
+    border-radius: 4px;
+    color: var(--accent);
+  }
+
+  /* ========== CONSOLE FALLBACK ========== */
+  .fallback {
+    padding: 0 0 4rem;
+  }
+  .fallback-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2rem;
+  }
+  .fallback-box h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .fallback-box p { font-size: 0.88rem; color: var(--text-dim); margin-bottom: 1rem; }
+  .fallback-box code {
+    display: block;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+    overflow-x: auto;
+    word-break: break-all;
+    line-height: 1.6;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    position: relative;
+  }
+  .fallback-box code:hover { border-color: var(--accent); }
+  .fallback-box code::after {
+    content: "click to copy";
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .fallback-box code.copied::after { content: "copied!"; color: var(--green); }
+
+  /* ========== FAQ ========== */
+  .faq {
+    padding: 0 0 4rem;
+  }
+  .faq h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  .faq-item {
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .faq-item:first-child { border-top: 1px solid var(--border); }
+  .faq-item h3 { font-size: 0.92rem; font-weight: 600; margin-bottom: 0.4rem; }
+  .faq-item p { font-size: 0.88rem; color: var(--text-dim); }
+
+  /* ========== FOOTER ========== */
+  .footer {
+    padding: 3rem 0;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+  .footer p { margin-bottom: 0.4rem; }
+
+  /* ========== MOBILE ========== */
+  @media (max-width: 640px) {
+    .hero { padding: 4rem 0 3rem; }
+    .bookmark-section { padding: 2rem 1.5rem; }
+    .export-grid { grid-template-columns: 1fr; }
+    .container { padding: 0 1.25rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">v2.0 &mdash; OPEN SOURCE &mdash; MIT LICENSE</div>
+    <h1>
+      Move from <span class="gpt">ChatGPT</span>
+      <span class="arrow">&rarr;</span>
+      <span class="claude">Claude</span>
+    </h1>
+    <p>Export your memories, every conversation, and all custom instructions. No extensions to install. No data leaves your browser. One click.</p>
+  </div>
+
+  <!-- BOOKMARKLET -->
+  <div class="bookmark-section" id="install">
+    <h2>Install in 3 seconds</h2>
+    <p class="subtitle">Drag this button to your bookmark bar. That's it.</p>
+
+    <a class="bookmarklet-link"
+       href="javascript:void(function(){var s=document.createElement('script');s.src='https://raw.githubusercontent.com/Siamsnus/GPT2Claude-Migration-Kit/main/migrate.js?v='+Date.now();document.head.appendChild(s)})();"
+       onclick="event.preventDefault();alert('Don\u0027t click — drag this button up to your bookmark bar!');">
+      &#x1F4E6;&ensp;GPT&rarr;Claude Export
+    </a>
+
+    <p class="drag-hint">
+      <strong>Drag</strong> the button above into your bookmark bar.<br>
+      Don't see your bookmark bar? Press <strong>Ctrl+Shift+B</strong> (Windows) or <strong>Cmd+Shift+B</strong> (Mac).
+    </p>
+    <span class="drag-arrow">&uarr;</span>
+  </div>
+
+  <!-- STEPS -->
+  <div class="steps">
+    <h2>How to use</h2>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num s1">1</div>
+        <div class="step-text">
+          <h3>Go to chatgpt.com and log in</h3>
+          <p>Make sure you can see your conversations in the sidebar. Any plan works &mdash; Free, Plus, Team.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num s2">2</div>
+        <div class="step-text">
+          <h3>Click the bookmark</h3>
+          <p>A dark floating panel appears on the right side of the page with three export buttons.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num s3">3</div>
+        <div class="step-text">
+          <h3>Click export, files download</h3>
+          <p>Each button exports one thing. Files save to your Downloads folder automatically. Upload them to Claude when done.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHAT YOU GET -->
+  <div class="exports-section">
+    <h2>What you get</h2>
+    <div class="export-grid">
+      <div class="export-card">
+        <div class="icon">&#x1F9E0;</div>
+        <h3>Memories</h3>
+        <p>Every fact ChatGPT memorized about you &mdash; preferences, name, context, all of it.</p>
+        <span class="filename">chatgpt_memories.md</span>
+      </div>
+      <div class="export-card">
+        <div class="icon">&#x1F4AC;</div>
+        <h3>Conversations</h3>
+        <p>Every chat, every message, with timestamps and model info. The full history.</p>
+        <span class="filename">chatgpt_all_conversations.json</span>
+      </div>
+      <div class="export-card">
+        <div class="icon">&#x2699;&#xFE0F;</div>
+        <h3>Instructions</h3>
+        <p>Your custom instructions and settings &mdash; the personality you configured.</p>
+        <span class="filename">chatgpt_instructions.json</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONSOLE FALLBACK -->
+  <div class="fallback">
+    <div class="fallback-box">
+      <h3>Bookmarklet not working?</h3>
+      <p>Some browsers block bookmarklets. You can load the tool manually via the browser console instead. Press <strong>F12</strong>, click <strong>Console</strong>, paste this, and press Enter:</p>
+      <code id="fallback-code" onclick="copyFallback(this)">var s=document.createElement('script');s.src='https://raw.githubusercontent.com/Siamsnus/GPT2Claude-Migration-Kit/main/migrate.js?v='+Date.now();document.head.appendChild(s);</code>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq">
+    <h2>Common questions</h2>
+
+    <div class="faq-item">
+      <h3>Is this safe? Where does my data go?</h3>
+      <p>Nowhere. Everything runs in your browser. The script reads your ChatGPT data through your existing login session and saves files directly to your computer. No external servers are contacted. The source code is fully open on GitHub.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>How long does the conversation export take?</h3>
+      <p>About 1 second per conversation. If you have 500 chats, expect ~10 minutes. The panel shows a progress bar. Don't close the tab while it's running.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>Does this work with a free ChatGPT account?</h3>
+      <p>Yes. Any ChatGPT account works &mdash; Free, Plus, Team, Enterprise.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>What do I do with the files once exported?</h3>
+      <p>Go to <a href="https://claude.ai" style="color:var(--accent)">claude.ai</a>, upload the files, and ask Claude to parse them. Start with: <em>"I just migrated from ChatGPT. Please parse these files, remember the key facts about me, and summarize my most important conversations."</em></p>
+    </div>
+
+    <div class="faq-item">
+      <h3>The export stopped or I got an error</h3>
+      <p>Usually a temporary rate limit from OpenAI. Wait a minute, refresh chatgpt.com, click the bookmark again, and retry. The tool handles rate limits automatically but occasionally needs a fresh start.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>Will OpenAI ban my account for this?</h3>
+      <p>This tool uses the same API that the ChatGPT website itself uses. You're accessing your own data through your own login. That said, these are undocumented endpoints and could change at any time.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>No existing extension does this?</h3>
+      <p>Browser extensions can export conversations as formatted text. This tool exports the raw data including memory items, message metadata, model info, and custom instructions &mdash; everything you need for a real migration, not just a printout.</p>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>GPT&rarr;Claude Migration Kit &mdash; built with <a href="https://claude.ai">Claude</a> by <a href="https://github.com/Siamsnus">Siamsnus</a></p>
+    <p>Open source under MIT License &mdash; <a href="https://github.com/Siamsnus/GPT2Claude-Migration-Kit">View source on GitHub</a></p>
+    <p style="margin-top: 0.75rem; font-size: 0.72rem; color: #444;">OpenAI's internal API endpoints may change without notice. This tool is not affiliated with OpenAI or Anthropic.</p>
+  </div>
+
+</div>
+
+<script>
+function copyFallback(el) {
+  navigator.clipboard.writeText(el.textContent).then(function() {
+    el.classList.add("copied");
+    setTimeout(function() { el.classList.remove("copied"); }, 2000);
+  });
+}
+</script>
+</body>
+</html>
