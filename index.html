@@ -4,10 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GPT to Claude Migration Kit - Export everything from ChatGPT</title>
-<meta name="description" content="Export your ChatGPT memories, conversations, and instructions. No install needed. One click, everything downloads.">
-<meta property="og:title" content="GPT to Claude Migration Kit">
-<meta property="og:description" content="Export everything from ChatGPT. No extensions, no install. One click.">
-<meta property="og:type" content="website">
+<meta name="description" content="Export your ChatGPT memories, conversations, and instructions. No install needed.">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -25,32 +22,57 @@
   .hero { padding: 6rem 0 4rem; text-align: center; }
   .hero-badge { display: inline-block; padding: 4px 14px; border: 1px solid var(--border); border-radius: 100px; font-family: var(--mono); font-size: 0.72rem; color: var(--text-dim); margin-bottom: 2rem; letter-spacing: 0.05em; }
   .hero h1 { font-size: clamp(2.2rem, 5vw, 3.2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1.5rem; }
-  .hero h1 .gpt { color: var(--gpt); }
-  .hero h1 .arrow { color: var(--text-dim); opacity: 0.4; }
-  .hero h1 .claude { color: var(--accent); }
+  .hero h1 .gpt { color: var(--gpt); } .hero h1 .arrow { color: var(--text-dim); opacity: 0.4; } .hero h1 .claude { color: var(--accent); }
   .hero p { font-size: 1.1rem; color: var(--text-dim); max-width: 520px; margin: 0 auto 3rem; }
-  .bookmark-section { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 3rem 2.5rem; text-align: center; position: relative; overflow: hidden; }
-  .bookmark-section::before { content: ""; position: absolute; top: -1px; left: -1px; right: -1px; height: 3px; background: linear-gradient(90deg, var(--gpt), var(--accent)); border-radius: 20px 20px 0 0; }
-  .bookmark-section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; }
-  .bookmark-section .subtitle { color: var(--text-dim); font-size: 0.92rem; margin-bottom: 2rem; }
-  .bookmarklet-link { display: inline-flex; align-items: center; gap: 10px; padding: 16px 32px; background: linear-gradient(135deg, #d4a574, #c49060); color: #0a0a0b; font-family: var(--sans); font-size: 1rem; font-weight: 700; text-decoration: none; border-radius: 12px; cursor: grab; transition: all 0.2s ease; box-shadow: 0 4px 20px var(--accent-glow), 0 0 0 1px rgba(212, 165, 116, 0.3); user-select: none; -webkit-user-select: none; }
-  .bookmarklet-link:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow), 0 0 0 1px rgba(212, 165, 116, 0.5); }
-  .bookmarklet-link:active { cursor: grabbing; transform: scale(0.98); }
-  .drag-hint { margin-top: 1.25rem; font-size: 0.82rem; color: var(--text-dim); }
+
+  .install-section { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 3rem 2.5rem; text-align: center; position: relative; overflow: hidden; }
+  .install-section::before { content: ""; position: absolute; top: -1px; left: -1px; right: -1px; height: 3px; background: linear-gradient(90deg, var(--gpt), var(--accent)); border-radius: 20px 20px 0 0; }
+  .install-section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .install-section .subtitle { color: var(--text-dim); font-size: 0.92rem; margin-bottom: 2rem; }
+
+  /* Tab system */
+  .tab-bar { display: flex; justify-content: center; gap: 0; margin-bottom: 2rem; background: var(--bg); border-radius: 10px; padding: 4px; border: 1px solid var(--border); }
+  .tab-btn { padding: 8px 20px; border: none; background: transparent; color: var(--text-dim); font-family: var(--sans); font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.2s; }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { background: var(--accent); color: var(--bg); }
+  .tab-content { display: none; text-align: left; }
+  .tab-content.active { display: block; }
+
+  .bookmarklet-link { display: inline-flex; align-items: center; gap: 10px; padding: 16px 32px; background: linear-gradient(135deg, #d4a574, #c49060); color: #0a0a0b; font-family: var(--sans); font-size: 1rem; font-weight: 700; text-decoration: none; border-radius: 12px; cursor: grab; transition: all 0.2s ease; box-shadow: 0 4px 20px var(--accent-glow); user-select: none; }
+  .bookmarklet-link:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow); }
+  .drag-hint { margin-top: 1rem; font-size: 0.82rem; color: var(--text-dim); text-align: center; }
   .drag-hint strong { color: var(--text); }
-  .drag-arrow { display: block; margin: 1.5rem auto 0; color: var(--accent); opacity: 0.5; font-size: 2rem; animation: bounce 2s ease-in-out infinite; }
-  @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+  .install-steps { text-align: left; }
+  .install-step { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1.25rem; }
+  .install-step-num { flex-shrink: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--accent-glow); color: var(--accent); font-family: var(--mono); font-size: 0.8rem; font-weight: 700; }
+  .install-step p { font-size: 0.9rem; color: var(--text-dim); }
+  .install-step p strong { color: var(--text); }
+
+  .url-box { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-family: var(--mono); font-size: 0.7rem; color: var(--accent); word-break: break-all; max-height: 80px; overflow-y: auto; margin: 0.75rem 0; line-height: 1.4; cursor: pointer; transition: border-color 0.2s; }
+  .url-box:hover { border-color: var(--accent); }
+
+  .action-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: var(--accent); color: var(--bg); border: none; border-radius: 10px; font-family: var(--sans); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .action-btn.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .action-btn.secondary:hover { border-color: var(--accent); }
+
+  .copy-confirm { font-size: 0.82rem; color: var(--green); margin-top: 0.5rem; display: none; }
+
+  .browser-detect { font-size: 0.82rem; color: var(--green); margin-bottom: 1rem; font-family: var(--mono); }
+
   .steps { padding: 4rem 0; }
   .steps h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 2rem; text-align: center; }
   .step-list { display: flex; flex-direction: column; gap: 1rem; }
-  .step-item { display: flex; gap: 1.25rem; align-items: flex-start; padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; transition: border-color 0.2s; }
+  .step-item { display: flex; gap: 1.25rem; align-items: flex-start; padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
   .step-item:hover { border-color: #353540; }
   .step-num { flex-shrink: 0; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-family: var(--mono); font-size: 0.85rem; font-weight: 700; }
-  .step-num.s1 { background: rgba(152, 152, 212, 0.12); color: var(--gpt); }
+  .step-num.s1 { background: rgba(152,152,212,0.12); color: var(--gpt); }
   .step-num.s2 { background: var(--accent-glow); color: var(--accent); }
-  .step-num.s3 { background: rgba(126, 184, 160, 0.12); color: var(--green); }
+  .step-num.s3 { background: rgba(126,184,160,0.12); color: var(--green); }
   .step-text h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
   .step-text p { font-size: 0.88rem; color: var(--text-dim); }
+
   .exports-section { padding: 0 0 4rem; }
   .exports-section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 2rem; text-align: center; }
   .export-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
@@ -59,78 +81,155 @@
   .export-card h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem; }
   .export-card p { font-size: 0.8rem; color: var(--text-dim); }
   .export-card .filename { display: inline-block; margin-top: 0.75rem; font-family: var(--mono); font-size: 0.7rem; padding: 3px 10px; background: var(--surface2); border-radius: 4px; color: var(--accent); }
-  .fallback { padding: 0 0 4rem; }
-  .fallback-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 2rem; }
+
+  .fallback-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 2rem; margin-bottom: 1rem; }
   .fallback-box h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
   .fallback-box p { font-size: 0.88rem; color: var(--text-dim); margin-bottom: 0.5rem; }
+
   .faq { padding: 0 0 4rem; }
   .faq h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 2rem; text-align: center; }
   .faq-item { padding: 1.25rem 0; border-bottom: 1px solid var(--border); }
   .faq-item:first-child { border-top: 1px solid var(--border); }
   .faq-item h3 { font-size: 0.92rem; font-weight: 600; margin-bottom: 0.4rem; }
   .faq-item p { font-size: 0.88rem; color: var(--text-dim); }
+
   .footer { padding: 3rem 0; border-top: 1px solid var(--border); text-align: center; font-size: 0.8rem; color: var(--text-dim); }
   .footer a { color: var(--accent); text-decoration: none; }
   .footer a:hover { text-decoration: underline; }
   .footer p { margin-bottom: 0.4rem; }
-  .copy-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--accent); color: var(--bg); border: none; border-radius: 8px; font-family: var(--sans); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-  .copy-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-  @media (max-width: 640px) { .hero { padding: 4rem 0 3rem; } .bookmark-section { padding: 2rem 1.5rem; } .export-grid { grid-template-columns: 1fr; } .container { padding: 0 1.25rem; } }
+
+  @media (max-width: 640px) { .hero { padding: 4rem 0 3rem; } .install-section { padding: 2rem 1.5rem; } .export-grid { grid-template-columns: 1fr; } .container { padding: 0 1.25rem; } .tab-btn { padding: 6px 12px; font-size: 0.78rem; } }
 </style>
 </head>
 <body>
 <div class="container">
 
   <div class="hero">
-    <div class="hero-badge">v2.0 &mdash; OPEN SOURCE &mdash; MIT LICENSE</div>
-    <h1>Move from <span class="gpt">ChatGPT</span> <span class="arrow">&rarr;</span> <span class="claude">Claude</span></h1>
-    <p>Export your memories, every conversation, and all custom instructions. No extensions to install. No data leaves your browser. One click.</p>
+    <div class="hero-badge">v2.0 — OPEN SOURCE — MIT LICENSE</div>
+    <h1>Move from <span class="gpt">ChatGPT</span> <span class="arrow">→</span> <span class="claude">Claude</span></h1>
+    <p>Export your memories, every conversation, and all custom instructions. No extensions to install. No data leaves your browser.</p>
   </div>
 
-  <div class="bookmark-section" id="install">
-    <h2>Install in 3 seconds</h2>
-    <p class="subtitle">Drag this button to your bookmark bar. That's it.</p>
-    <a class="bookmarklet-link" id="bookmarklet-btn" href="javascript:%28function%28%29%7Bif%28document.getElementById%28%22gpt2claude-panel%22%29%29%7Bvar%20existing%3Ddocument.getElementById%28%22gpt2claude-panel%22%29%3Bexisting.style.animation%3D%22g2c-shake%200.3s%20ease-in-out%22%3BsetTimeout%28function%28%29%7Bexisting.style.animation%3D%22%22%3B%7D%2C300%29%3Breturn%3B%7D%0Avar%20style%3Ddocument.createElement%28%22style%22%29%3Bstyle.textContent%3D%22%5C%0A%20%20%20%20%40keyframes%20g2c-fadein%20%7B%20from%20%7B%20opacity%3A%200%3B%20transform%3A%20translateY%2820px%29%20scale%280.95%29%3B%20%7D%20to%20%7B%20opacity%3A%201%3B%20transform%3A%20translateY%280%29%20scale%281%29%3B%20%7D%20%7D%5C%0A%20%20%20%20%40keyframes%20g2c-shake%20%7B%200%25%2C100%25%20%7B%20transform%3A%20translateX%280%29%3B%20%7D%2025%25%20%7B%20transform%3A%20translateX%28-5px%29%3B%20%7D%2075%25%20%7B%20transform%3A%20translateX%285px%29%3B%20%7D%20%7D%5C%0A%20%20%20%20%40keyframes%20g2c-spin%20%7B%20to%20%7B%20transform%3A%20rotate%28360deg%29%3B%20%7D%20%7D%5C%0A%20%20%20%20%40keyframes%20g2c-pulse%20%7B%200%25%2C100%25%20%7B%20opacity%3A%201%3B%20%7D%2050%25%20%7B%20opacity%3A%200.5%3B%20%7D%20%7D%5C%0A%20%20%20%20%23gpt2claude-panel%20%7B%20position%3A%20fixed%3B%20top%3A%2050%25%3B%20right%3A%2024px%3B%20transform%3A%20translateY%28-50%25%29%3B%20width%3A%20340px%3B%20background%3A%20%230a0a0b%3B%20border%3A%201px%20solid%20%232a2a30%3B%20border-radius%3A%2016px%3B%20box-shadow%3A%200%2025px%2060px%20rgba%280%2C0%2C0%2C0.6%29%2C%200%200%200%201px%20rgba%28255%2C255%2C255%2C0.05%29%3B%20z-index%3A%20999999%3B%20font-family%3A%20-apple-system%2C%20BlinkMacSystemFont%2C%20%27Segoe%20UI%27%2C%20sans-serif%3B%20color%3A%20%23e8e8ec%3B%20animation%3A%20g2c-fadein%200.3s%20ease-out%3B%20%7D%5C%0A%20%20%20%20%23gpt2claude-panel%20%2A%20%7B%20box-sizing%3A%20border-box%3B%20margin%3A%200%3B%20padding%3A%200%3B%20%7D%5C%0A%20%20%20%20.g2c-header%20%7B%20display%3A%20flex%3B%20justify-content%3A%20space-between%3B%20align-items%3A%20center%3B%20padding%3A%2016px%2020px%2012px%3B%20border-bottom%3A%201px%20solid%20%232a2a30%3B%20%7D%5C%0A%20%20%20%20.g2c-title%20%7B%20font-size%3A%2014px%3B%20font-weight%3A%20700%3B%20letter-spacing%3A%20-0.01em%3B%20%7D%5C%0A%20%20%20%20.g2c-title%20span.gpt%20%7B%20color%3A%20%23a0a0e0%3B%20%7D%5C%0A%20%20%20%20.g2c-title%20span.arrow%20%7B%20color%3A%20%23555%3B%20margin%3A%200%204px%3B%20%7D%5C%0A%20%20%20%20.g2c-title%20span.claude%20%7B%20color%3A%20%23d4a574%3B%20%7D%5C%0A%20%20%20%20.g2c-version%20%7B%20font-size%3A%2010px%3B%20color%3A%20%23555%3B%20font-weight%3A%20600%3B%20%7D%5C%0A%20%20%20%20.g2c-close%20%7B%20background%3A%20none%3B%20border%3A%20none%3B%20color%3A%20%23666%3B%20font-size%3A%2018px%3B%20cursor%3A%20pointer%3B%20padding%3A%204px%208px%3B%20border-radius%3A%206px%3B%20line-height%3A%201%3B%20%7D%5C%0A%20%20%20%20.g2c-close%3Ahover%20%7B%20background%3A%20%231c1c20%3B%20color%3A%20%23e8e8ec%3B%20%7D%5C%0A%20%20%20%20.g2c-body%20%7B%20padding%3A%2016px%2020px%3B%20%7D%5C%0A%20%20%20%20.g2c-btn%20%7B%20width%3A%20100%25%3B%20padding%3A%2012px%2016px%3B%20border%3A%201px%20solid%20%232a2a30%3B%20border-radius%3A%2010px%3B%20background%3A%20%23141416%3B%20color%3A%20%23e8e8ec%3B%20font-size%3A%2013px%3B%20font-weight%3A%20600%3B%20cursor%3A%20pointer%3B%20text-align%3A%20left%3B%20margin-bottom%3A%208px%3B%20display%3A%20flex%3B%20align-items%3A%20center%3B%20gap%3A%2010px%3B%20transition%3A%20all%200.15s%20ease%3B%20position%3A%20relative%3B%20overflow%3A%20hidden%3B%20%7D%5C%0A%20%20%20%20.g2c-btn%3Ahover%20%7B%20background%3A%20%231c1c20%3B%20border-color%3A%20%233a3a40%3B%20transform%3A%20translateY%28-1px%29%3B%20%7D%5C%0A%20%20%20%20.g2c-btn%3Aactive%20%7B%20transform%3A%20translateY%280%29%3B%20%7D%5C%0A%20%20%20%20.g2c-btn.running%20%7B%20pointer-events%3A%20none%3B%20border-color%3A%20%23d4a574%3B%20%7D%5C%0A%20%20%20%20.g2c-btn.done%20%7B%20border-color%3A%20%237eb8a0%3B%20%7D%5C%0A%20%20%20%20.g2c-btn.error%20%7B%20border-color%3A%20%23e07070%3B%20%7D%5C%0A%20%20%20%20.g2c-btn-icon%20%7B%20font-size%3A%2018px%3B%20width%3A%2024px%3B%20text-align%3A%20center%3B%20flex-shrink%3A%200%3B%20%7D%5C%0A%20%20%20%20.g2c-btn-text%20%7B%20flex%3A%201%3B%20%7D%5C%0A%20%20%20%20.g2c-btn-sub%20%7B%20font-size%3A%2011px%3B%20color%3A%20%23666%3B%20font-weight%3A%20400%3B%20margin-top%3A%202px%3B%20%7D%5C%0A%20%20%20%20.g2c-progress%20%7B%20margin-top%3A%206px%3B%20%7D%5C%0A%20%20%20%20.g2c-progress-bar%20%7B%20width%3A%20100%25%3B%20height%3A%204px%3B%20background%3A%20%231c1c20%3B%20border-radius%3A%202px%3B%20overflow%3A%20hidden%3B%20%7D%5C%0A%20%20%20%20.g2c-progress-fill%20%7B%20height%3A%20100%25%3B%20background%3A%20linear-gradient%2890deg%2C%20%23d4a574%2C%20%23e8c49a%29%3B%20border-radius%3A%202px%3B%20transition%3A%20width%200.3s%20ease%3B%20width%3A%200%25%3B%20%7D%5C%0A%20%20%20%20.g2c-progress-text%20%7B%20font-size%3A%2011px%3B%20color%3A%20%238e8e96%3B%20margin-top%3A%204px%3B%20%7D%5C%0A%20%20%20%20.g2c-log%20%7B%20margin-top%3A%2012px%3B%20max-height%3A%20120px%3B%20overflow-y%3A%20auto%3B%20background%3A%20%230d0d0e%3B%20border%3A%201px%20solid%20%231c1c20%3B%20border-radius%3A%208px%3B%20padding%3A%208px%2010px%3B%20font-family%3A%20%27SF%20Mono%27%2C%20%27Consolas%27%2C%20monospace%3B%20font-size%3A%2011px%3B%20line-height%3A%201.5%3B%20color%3A%20%238e8e96%3B%20display%3A%20none%3B%20%7D%5C%0A%20%20%20%20.g2c-log.visible%20%7B%20display%3A%20block%3B%20%7D%5C%0A%20%20%20%20.g2c-log-entry%20%7B%20white-space%3A%20nowrap%3B%20overflow%3A%20hidden%3B%20text-overflow%3A%20ellipsis%3B%20%7D%5C%0A%20%20%20%20.g2c-log-entry.error%20%7B%20color%3A%20%23e07070%3B%20%7D%5C%0A%20%20%20%20.g2c-log-entry.success%20%7B%20color%3A%20%237eb8a0%3B%20%7D%5C%0A%20%20%20%20.g2c-footer%20%7B%20padding%3A%2012px%2020px%3B%20border-top%3A%201px%20solid%20%231c1c20%3B%20display%3A%20flex%3B%20justify-content%3A%20space-between%3B%20align-items%3A%20center%3B%20%7D%5C%0A%20%20%20%20.g2c-footer-text%20%7B%20font-size%3A%2010px%3B%20color%3A%20%23444%3B%20%7D%5C%0A%20%20%20%20.g2c-footer-link%20%7B%20font-size%3A%2010px%3B%20color%3A%20%23d4a574%3B%20text-decoration%3A%20none%3B%20%7D%5C%0A%20%20%20%20.g2c-footer-link%3Ahover%20%7B%20text-decoration%3A%20underline%3B%20%7D%5C%0A%20%20%20%20.g2c-spinner%20%7B%20display%3A%20inline-block%3B%20width%3A%2014px%3B%20height%3A%2014px%3B%20border%3A%202px%20solid%20%23333%3B%20border-top-color%3A%20%23d4a574%3B%20border-radius%3A%2050%25%3B%20animation%3A%20g2c-spin%200.6s%20linear%20infinite%3B%20%7D%5C%0A%20%20%20%20.g2c-toggle-log%20%7B%20background%3A%20none%3B%20border%3A%20none%3B%20color%3A%20%23555%3B%20font-size%3A%2011px%3B%20cursor%3A%20pointer%3B%20padding%3A%204px%200%3B%20margin-top%3A%208px%3B%20%7D%5C%0A%20%20%20%20.g2c-toggle-log%3Ahover%20%7B%20color%3A%20%23999%3B%20%7D%5C%0A%20%20%20%20.g2c-drag-handle%20%7B%20cursor%3A%20move%3B%20%7D%5C%0A%20%20%22%3Bdocument.head.appendChild%28style%29%3Bvar%20panel%3Ddocument.createElement%28%22div%22%29%3Bpanel.id%3D%22gpt2claude-panel%22%3Bpanel.innerHTML%3D%27%5C%0A%20%20%20%20%3Cdiv%20class%3D%22g2c-header%20g2c-drag-handle%22%3E%5C%0A%20%20%20%20%20%20%3Cdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-title%22%3E%3Cspan%20class%3D%22gpt%22%3EGPT%3C%2Fspan%3E%3Cspan%20class%3D%22arrow%22%3E%5Cu2192%3C%2Fspan%3E%3Cspan%20class%3D%22claude%22%3EClaude%3C%2Fspan%3E%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-version%22%3EMigration%20Kit%20v2.0%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3Cbutton%20class%3D%22g2c-close%22%20id%3D%22g2c-close%22%3E%5Cu00D7%3C%2Fbutton%3E%5C%0A%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%3Cdiv%20class%3D%22g2c-body%22%3E%5C%0A%20%20%20%20%20%20%3Cbutton%20class%3D%22g2c-btn%22%20id%3D%22g2c-btn-memory%22%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-icon%22%3E%5CuD83E%5CuDDE0%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-text%22%3E%5C%0A%20%20%20%20%20%20%20%20%20%20Export%20Memories%5C%0A%20%20%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-sub%22%3EFacts%20ChatGPT%20learned%20about%20you%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3C%2Fbutton%3E%5C%0A%20%20%20%20%20%20%3Cbutton%20class%3D%22g2c-btn%22%20id%3D%22g2c-btn-convos%22%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-icon%22%3E%5CuD83D%5CuDCAC%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-text%22%3E%5C%0A%20%20%20%20%20%20%20%20%20%20Export%20All%20Conversations%5C%0A%20%20%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-sub%22%3EEvery%20chat%20with%20full%20history%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3C%2Fbutton%3E%5C%0A%20%20%20%20%20%20%3Cbutton%20class%3D%22g2c-btn%22%20id%3D%22g2c-btn-instructions%22%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-icon%22%3E%5Cu2699%5CuFE0F%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-text%22%3E%5C%0A%20%20%20%20%20%20%20%20%20%20Export%20Instructions%5C%0A%20%20%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-sub%22%3ECustom%20instructions%20%26amp%3B%20settings%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3C%2Fbutton%3E%5C%0A%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-progress%22%20id%3D%22g2c-progress%22%20style%3D%22display%3Anone%3B%22%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-progress-bar%22%3E%3Cdiv%20class%3D%22g2c-progress-fill%22%20id%3D%22g2c-progress-fill%22%3E%3C%2Fdiv%3E%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-progress-text%22%20id%3D%22g2c-progress-text%22%3E%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3Cbutton%20class%3D%22g2c-toggle-log%22%20id%3D%22g2c-toggle-log%22%3EShow%20log%20%5Cu25BC%3C%2Fbutton%3E%5C%0A%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-log%22%20id%3D%22g2c-log%22%3E%3C%2Fdiv%3E%5C%0A%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%3Cdiv%20class%3D%22g2c-footer%22%3E%5C%0A%20%20%20%20%20%20%3Cspan%20class%3D%22g2c-footer-text%22%3EAll%20data%20stays%20in%20your%20browser%3C%2Fspan%3E%5C%0A%20%20%20%20%20%20%3Ca%20class%3D%22g2c-footer-link%22%20href%3D%22https%3A%2F%2Fgithub.com%2FSiamsnus%2FGPT2Claude-Migration-Kit%22%20target%3D%22_blank%22%3EGitHub%3C%2Fa%3E%5C%0A%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%27%3Bdocument.body.appendChild%28panel%29%3Bvar%20isDragging%3Dfalse%3Bvar%20dragOffsetX%3D0%3Bvar%20dragOffsetY%3D0%3Bvar%20header%3Dpanel.querySelector%28%22.g2c-drag-handle%22%29%3Bheader.addEventListener%28%22mousedown%22%2Cfunction%28e%29%7Bif%28e.target.classList.contains%28%22g2c-close%22%29%29return%3BisDragging%3Dtrue%3Bvar%20rect%3Dpanel.getBoundingClientRect%28%29%3BdragOffsetX%3De.clientX-rect.left%3BdragOffsetY%3De.clientY-rect.top%3Bpanel.style.transition%3D%22none%22%3Be.preventDefault%28%29%3B%7D%29%3Bdocument.addEventListener%28%22mousemove%22%2Cfunction%28e%29%7Bif%28%21isDragging%29return%3Bpanel.style.right%3D%22auto%22%3Bpanel.style.transform%3D%22none%22%3Bpanel.style.left%3D%28e.clientX-dragOffsetX%29%2B%22px%22%3Bpanel.style.top%3D%28e.clientY-dragOffsetY%29%2B%22px%22%3B%7D%29%3Bdocument.addEventListener%28%22mouseup%22%2Cfunction%28%29%7BisDragging%3Dfalse%3Bpanel.style.transition%3D%22%22%3B%7D%29%3Bvar%20logEl%3Ddocument.getElementById%28%22g2c-log%22%29%3Bvar%20progressEl%3Ddocument.getElementById%28%22g2c-progress%22%29%3Bvar%20progressFill%3Ddocument.getElementById%28%22g2c-progress-fill%22%29%3Bvar%20progressText%3Ddocument.getElementById%28%22g2c-progress-text%22%29%3Bfunction%20log%28msg%2Ctype%29%7Bvar%20entry%3Ddocument.createElement%28%22div%22%29%3Bentry.className%3D%22g2c-log-entry%22%2B%28type%3F%22%20%22%2Btype%3A%22%22%29%3Bentry.textContent%3Dmsg%3BlogEl.appendChild%28entry%29%3BlogEl.scrollTop%3DlogEl.scrollHeight%3B%7D%0Afunction%20setProgress%28pct%2Ctext%29%7BprogressEl.style.display%3D%22block%22%3BprogressFill.style.width%3Dpct%2B%22%25%22%3Bif%28text%29progressText.textContent%3Dtext%3B%7D%0Afunction%20setButtonState%28btn%2Cstate%2Clabel%29%7Bbtn.className%3D%22g2c-btn%20%22%2Bstate%3Bvar%20iconEl%3Dbtn.querySelector%28%22.g2c-btn-icon%22%29%3Bif%28state%3D%3D%3D%22running%22%29%7BiconEl.innerHTML%3D%27%3Cdiv%20class%3D%22g2c-spinner%22%3E%3C%2Fdiv%3E%27%3B%7Delse%20if%28state%3D%3D%3D%22done%22%29%7BiconEl.textContent%3D%22%5Cu2705%22%3B%7Delse%20if%28state%3D%3D%3D%22error%22%29%7BiconEl.textContent%3D%22%5Cu274C%22%3B%7D%0Aif%28label%29%7Bbtn.querySelector%28%22.g2c-btn-sub%22%29.textContent%3Dlabel%3B%7D%7D%0Afunction%20downloadFile%28content%2Cfilename%2Ctype%29%7Bvar%20blob%3Dnew%20Blob%28%5Bcontent%5D%2C%7Btype%3Atype%7C%7C%22text%2Fplain%22%7D%29%3Bvar%20url%3DURL.createObjectURL%28blob%29%3Bvar%20a%3Ddocument.createElement%28%22a%22%29%3Ba.href%3Durl%3Ba.download%3Dfilename%3Bdocument.body.appendChild%28a%29%3Ba.click%28%29%3Bdocument.body.removeChild%28a%29%3BURL.revokeObjectURL%28url%29%3Blog%28%22Downloaded%3A%20%22%2Bfilename%2C%22success%22%29%3B%7D%0Avar%20cachedToken%3Dnull%3Basync%20function%20getToken%28%29%7Bif%28cachedToken%29return%20cachedToken%3Blog%28%22Authenticating...%22%29%3Bvar%20resp%3Dawait%20fetch%28%22https%3A%2F%2Fchatgpt.com%2Fapi%2Fauth%2Fsession%22%2C%7Bcredentials%3A%22include%22%7D%29%3Bif%28resp.status%21%3D%3D200%29%7Bthrow%20new%20Error%28%22Auth%20failed%20%28HTTP%20%22%2Bresp.status%2B%22%29.%20Are%20you%20logged%20in%3F%22%29%3B%7D%0Avar%20data%3Dawait%20resp.json%28%29%3Bif%28%21data.accessToken%29%7Bthrow%20new%20Error%28%22No%20token%20found.%20Please%20refresh%20chatgpt.com%20and%20try%20again.%22%29%3B%7D%0AcachedToken%3Ddata.accessToken%3Blog%28%22Authenticated%20OK%22%29%3Breturn%20cachedToken%3B%7D%0Aasync%20function%20exportMemories%28%29%7Bvar%20btn%3Ddocument.getElementById%28%22g2c-btn-memory%22%29%3BsetButtonState%28btn%2C%22running%22%2C%22Exporting...%22%29%3Btry%7Bvar%20token%3Dawait%20getToken%28%29%3Blog%28%22Fetching%20memories...%22%29%3Bvar%20resp%3Dawait%20fetch%28%22https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Fmemories%22%2C%7Bcredentials%3A%22include%22%2Cheaders%3A%7B%22Authorization%22%3A%22Bearer%20%22%2Btoken%7D%7D%29%3Bif%28resp.status%21%3D%3D200%29%7Bthrow%20new%20Error%28%22Could%20not%20fetch%20memories%20%28HTTP%20%22%2Bresp.status%2B%22%29%22%29%3B%7D%0Avar%20data%3Dawait%20resp.json%28%29%3Bvar%20memories%3Ddata.memories%7C%7Cdata.results%7C%7Cdata%3Bvar%20md%3D%22%23%20ChatGPT%20Memory%20Export%5Cn%22%3Bmd%2B%3D%22%23%20Exported%3A%20%22%2Bnew%20Date%28%29.toISOString%28%29%2B%22%5Cn%22%3Bmd%2B%3D%22%23%20Tool%3A%20GPT2Claude%20Migration%20Kit%20v2.0%5Cn%5Cn%22%3Bvar%20count%3D0%3Bif%28Array.isArray%28memories%29%29%7Bcount%3Dmemories.length%3Bfor%28var%20i%3D0%3Bi%3Cmemories.length%3Bi%2B%2B%29%7Bvar%20m%3Dmemories%5Bi%5D%3Bvar%20content%3Dm.content%7C%7Cm.value%7C%7Cm.text%7C%7Cm.memory%7C%7CJSON.stringify%28m%29%3Bmd%2B%3D%28i%2B1%29%2B%22.%20%22%2Bcontent%2B%22%5Cn%22%3B%7D%7Delse%7Bmd%2B%3DJSON.stringify%28memories%2Cnull%2C2%29%3B%7D%0Alog%28%22Found%20%22%2Bcount%2B%22%20memories%22%29%3BdownloadFile%28md%2C%22chatgpt_memories.md%22%2C%22text%2Fmarkdown%22%29%3BsetButtonState%28btn%2C%22done%22%2Ccount%2B%22%20memories%20exported%22%29%3B%7Dcatch%28err%29%7Blog%28%22Memory%20export%20failed%3A%20%22%2Berr.message%2C%22error%22%29%3BsetButtonState%28btn%2C%22error%22%2Cerr.message%29%3B%7D%7D%0Aasync%20function%20exportConversations%28%29%7Bvar%20btn%3Ddocument.getElementById%28%22g2c-btn-convos%22%29%3BsetButtonState%28btn%2C%22running%22%2C%22Getting%20conversation%20list...%22%29%3Btry%7Bvar%20token%3Dawait%20getToken%28%29%3Bvar%20headers%3D%7B%22Authorization%22%3A%22Bearer%20%22%2Btoken%7D%3Bvar%20allConvos%3D%5B%5D%3Bvar%20offset%3D0%3Blog%28%22Fetching%20conversation%20list...%22%29%3Bwhile%28true%29%7Bvar%20listResp%3Dawait%20fetch%28%22https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Fconversations%3Foffset%3D%22%2Boffset%2B%22%26limit%3D100%26order%3Dupdated%22%2C%7Bcredentials%3A%22include%22%2Cheaders%3Aheaders%7D%29%3Bif%28listResp.status%21%3D%3D200%29%7Bthrow%20new%20Error%28%22Could%20not%20get%20conversations%20%28HTTP%20%22%2BlistResp.status%2B%22%29%22%29%3B%7D%0Avar%20listData%3Dawait%20listResp.json%28%29%3Bvar%20items%3DlistData.items%7C%7C%5B%5D%3Blog%28%22Batch%3A%20%22%2Bitems.length%2B%22%20conversations%20%28offset%20%22%2Boffset%2B%22%29%22%29%3Bfor%28var%20j%3D0%3Bj%3Citems.length%3Bj%2B%2B%29%7BallConvos.push%28items%5Bj%5D%29%3B%7D%0Aoffset%2B%3Ditems.length%3Bif%28items.length%3C100%29break%3Bawait%20new%20Promise%28function%28r%29%7BsetTimeout%28r%2C500%29%3B%7D%29%3B%7D%0Alog%28%22Total%20conversations%3A%20%22%2BallConvos.length%29%3BsetButtonState%28btn%2C%22running%22%2C%22Downloading%200%2F%22%2BallConvos.length%2B%22...%22%29%3Bvar%20fullExport%3D%7Bexport_date%3Anew%20Date%28%29.toISOString%28%29%2Ctool%3A%22GPT2Claude%20Migration%20Kit%20v2.0%22%2Ctotal_conversations%3AallConvos.length%2Cconversations%3A%5B%5D%7D%3Bvar%20successCount%3D0%3Bvar%20errorCount%3D0%3Bfor%28var%20i%3D0%3Bi%3CallConvos.length%3Bi%2B%2B%29%7Bvar%20c%3DallConvos%5Bi%5D%3Bvar%20title%3Dc.title%7C%7C%22Untitled%22%3Bvar%20pct%3DMath.round%28%28%28i%2B1%29%2FallConvos.length%29%2A100%29%3BsetProgress%28pct%2C%28i%2B1%29%2B%22%20%2F%20%22%2BallConvos.length%2B%22%20%E2%80%94%20%22%2Btitle%29%3BsetButtonState%28btn%2C%22running%22%2C%22Downloading%20%22%2B%28i%2B1%29%2B%22%2F%22%2BallConvos.length%2B%22...%22%29%3Btry%7Bvar%20convoResp%3Dawait%20fetch%28%22https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Fconversation%2F%22%2Bc.id%2C%7Bcredentials%3A%22include%22%2Cheaders%3Aheaders%7D%29%3Bif%28convoResp.status%3D%3D%3D429%29%7Blog%28%22Rate%20limited%2C%20waiting%2030s...%22%2C%22error%22%29%3BsetButtonState%28btn%2C%22running%22%2C%22Rate%20limited%20%E2%80%94%20waiting%2030s...%22%29%3Bawait%20new%20Promise%28function%28r%29%7BsetTimeout%28r%2C30000%29%3B%7D%29%3Bi--%3Bcontinue%3B%7D%0Aif%28convoResp.status%21%3D%3D200%29%7Blog%28%22Skipped%3A%20%22%2Btitle%2B%22%20%28HTTP%20%22%2BconvoResp.status%2B%22%29%22%2C%22error%22%29%3BerrorCount%2B%2B%3BfullExport.conversations.push%28%7Bid%3Ac.id%2Ctitle%3Atitle%2Cerror%3A%22HTTP%20%22%2BconvoResp.status%7D%29%3Bcontinue%3B%7D%0Avar%20detail%3Dawait%20convoResp.json%28%29%3Bvar%20messages%3D%5B%5D%3Bif%28detail.mapping%29%7Bvar%20nodeKeys%3DObject.keys%28detail.mapping%29%3Bvar%20nodes%3D%5B%5D%3Bfor%28var%20k%3D0%3Bk%3CnodeKeys.length%3Bk%2B%2B%29%7Bnodes.push%28detail.mapping%5BnodeKeys%5Bk%5D%5D%29%3B%7D%0Anodes.sort%28function%28a%2Cb%29%7Bvar%20ta%3D%28a.message%26%26a.message.create_time%29%3Fa.message.create_time%3A0%3Bvar%20tb%3D%28b.message%26%26b.message.create_time%29%3Fb.message.create_time%3A0%3Breturn%20ta-tb%3B%7D%29%3Bfor%28var%20n%3D0%3Bn%3Cnodes.length%3Bn%2B%2B%29%7Bvar%20node%3Dnodes%5Bn%5D%3Bif%28node.message%26%26node.message.content%29%7Bvar%20parts%3Dnode.message.content.parts%3Bvar%20text%3D%22%22%3Bif%28Array.isArray%28parts%29%29%7Bvar%20textParts%3D%5B%5D%3Bfor%28var%20p%3D0%3Bp%3Cparts.length%3Bp%2B%2B%29%7Bif%28typeof%20parts%5Bp%5D%3D%3D%3D%22string%22%29%7BtextParts.push%28parts%5Bp%5D%29%3B%7D%7D%0Atext%3DtextParts.join%28%22%5Cn%22%29%3B%7Delse%7Btext%3DJSON.stringify%28node.message.content%29%3B%7D%0Aif%28text.trim%28%29%21%3D%3D%22%22%29%7Bvar%20role%3D%22unknown%22%3Bif%28node.message.author%26%26node.message.author.role%29%7Brole%3Dnode.message.author.role%3B%7D%0Avar%20model%3Dnull%3Bif%28node.message.metadata%26%26node.message.metadata.model_slug%29%7Bmodel%3Dnode.message.metadata.model_slug%3B%7D%0Amessages.push%28%7Brole%3Arole%2Ccontent%3Atext%2Ctimestamp%3Anode.message.create_time%7C%7Cnull%2Cmodel%3Amodel%7D%29%3B%7D%7D%7D%7D%0AfullExport.conversations.push%28%7Bid%3Ac.id%2Ctitle%3Atitle%2Ccreate_time%3Ac.create_time%2Cupdate_time%3Ac.update_time%2Cmodel%3Adetail.default_model_slug%7C%7Cnull%2Cmessage_count%3Amessages.length%2Cmessages%3Amessages%7D%29%3BsuccessCount%2B%2B%3Bif%28i%2525%3D%3D%3D0%26%26i%3E0%29%7Blog%28%22Progress%3A%20%22%2B%28i%2B1%29%2B%22%2F%22%2BallConvos.length%29%3B%7D%7Dcatch%28err%29%7Blog%28%22Error%3A%20%22%2Btitle%2B%22%20%E2%80%94%20%22%2Berr.message%2C%22error%22%29%3BerrorCount%2B%2B%3BfullExport.conversations.push%28%7Bid%3Ac.id%2Ctitle%3Atitle%2Cerror%3Aerr.message%7D%29%3B%7D%0Aawait%20new%20Promise%28function%28r%29%7BsetTimeout%28r%2C1000%29%3B%7D%29%3B%7D%0Avar%20json%3DJSON.stringify%28fullExport%2Cnull%2C2%29%3Bvar%20sizeMB%3D%28json.length%2F1024%2F1024%29.toFixed%281%29%3BdownloadFile%28json%2C%22chatgpt_all_conversations.json%22%2C%22application%2Fjson%22%29%3BsetProgress%28100%2C%22Complete%21%20%22%2BsuccessCount%2B%22%20conversations%2C%20~%22%2BsizeMB%2B%22%20MB%22%29%3BsetButtonState%28btn%2C%22done%22%2CsuccessCount%2B%22%20conversations%20exported%22%29%3Blog%28%22DONE%21%20%22%2BsuccessCount%2B%22%20conversations%2C%20%22%2BerrorCount%2B%22%20errors%2C%20~%22%2BsizeMB%2B%22%20MB%22%2C%22success%22%29%3B%7Dcatch%28err%29%7Blog%28%22Conversation%20export%20failed%3A%20%22%2Berr.message%2C%22error%22%29%3BsetButtonState%28btn%2C%22error%22%2Cerr.message%29%3B%7D%7D%0Aasync%20function%20exportInstructions%28%29%7Bvar%20btn%3Ddocument.getElementById%28%22g2c-btn-instructions%22%29%3BsetButtonState%28btn%2C%22running%22%2C%22Exporting...%22%29%3Btry%7Bvar%20token%3Dawait%20getToken%28%29%3Bvar%20headers%3D%7B%22Authorization%22%3A%22Bearer%20%22%2Btoken%7D%3Bvar%20endpoints%3D%5B%7Bname%3A%22custom_instructions%22%2Curl%3A%22https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Fuser_system_messages%22%7D%2C%7Bname%3A%22settings%22%2Curl%3A%22https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Fsettings%22%7D%5D%3Bvar%20result%3D%7Bexport_date%3Anew%20Date%28%29.toISOString%28%29%2Ctool%3A%22GPT2Claude%20Migration%20Kit%20v2.0%22%2Cdata%3A%7B%7D%7D%3Bfor%28var%20i%3D0%3Bi%3Cendpoints.length%3Bi%2B%2B%29%7Bvar%20ep%3Dendpoints%5Bi%5D%3Blog%28%22Fetching%20%22%2Bep.name%2B%22...%22%29%3Btry%7Bvar%20resp%3Dawait%20fetch%28ep.url%2C%7Bcredentials%3A%22include%22%2Cheaders%3Aheaders%7D%29%3Bif%28resp.status%3D%3D%3D200%29%7Bresult.data%5Bep.name%5D%3Dawait%20resp.json%28%29%3Blog%28%22Got%3A%20%22%2Bep.name%29%3B%7Delse%7Bresult.data%5Bep.name%5D%3D%7Berror%3A%22HTTP%20%22%2Bresp.status%7D%3Blog%28ep.name%2B%22%3A%20HTTP%20%22%2Bresp.status%2C%22error%22%29%3B%7D%7Dcatch%28e%29%7Bresult.data%5Bep.name%5D%3D%7Berror%3Ae.message%7D%3Blog%28ep.name%2B%22%20error%3A%20%22%2Be.message%2C%22error%22%29%3B%7D%7D%0AdownloadFile%28JSON.stringify%28result%2Cnull%2C2%29%2C%22chatgpt_instructions.json%22%2C%22application%2Fjson%22%29%3BsetButtonState%28btn%2C%22done%22%2C%22Instructions%20exported%22%29%3B%7Dcatch%28err%29%7Blog%28%22Instructions%20export%20failed%3A%20%22%2Berr.message%2C%22error%22%29%3BsetButtonState%28btn%2C%22error%22%2Cerr.message%29%3B%7D%7D%0Adocument.getElementById%28%22g2c-close%22%29.addEventListener%28%22click%22%2Cfunction%28%29%7Bpanel.style.animation%3D%22g2c-fadein%200.2s%20ease-out%20reverse%22%3BsetTimeout%28function%28%29%7Bpanel.remove%28%29%3Bstyle.remove%28%29%3B%7D%2C200%29%3B%7D%29%3Bdocument.getElementById%28%22g2c-btn-memory%22%29.addEventListener%28%22click%22%2CexportMemories%29%3Bdocument.getElementById%28%22g2c-btn-convos%22%29.addEventListener%28%22click%22%2CexportConversations%29%3Bdocument.getElementById%28%22g2c-btn-instructions%22%29.addEventListener%28%22click%22%2CexportInstructions%29%3Bdocument.getElementById%28%22g2c-toggle-log%22%29.addEventListener%28%22click%22%2Cfunction%28%29%7Bvar%20logVisible%3DlogEl.classList.contains%28%22visible%22%29%3BlogEl.classList.toggle%28%22visible%22%29%3Bthis.textContent%3DlogVisible%3F%22Show%20log%20%5Cu25BC%22%3A%22Hide%20log%20%5Cu25B2%22%3B%7D%29%3Blog%28%22Ready.%20Click%20a%20button%20to%20start%20exporting.%22%29%3B%7D%29%28%29%3B" onclick="event.preventDefault();alert('Do not click! Drag this button up to your bookmark bar instead.');">&#x1F4E6;&ensp;GPT&rarr;Claude Export</a>
-    <p class="drag-hint"><strong>Drag</strong> the button above into your bookmark bar.<br>Don't see it? Press <strong>Ctrl+Shift+B</strong> (Win) or <strong>Cmd+Shift+B</strong> (Mac).</p>
-    <span class="drag-arrow">&uarr;</span>
-    <p class="drag-hint" style="margin-top:1rem; font-size:0.78rem; color:#555;">If dragging doesn't work, right-click the button &rarr; <strong>Bookmark This Link</strong></p>
+  <!-- ========== INSTALL SECTION ========== -->
+  <div class="install-section" id="install">
+    <h2>Add the export tool</h2>
+    <p class="subtitle">Choose your browser, follow the steps. Takes 30 seconds.</p>
+
+    <div id="browser-detect" class="browser-detect"></div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="showTab('chrome')">Chrome / Edge / Brave</button>
+      <button class="tab-btn" onclick="showTab('firefox')">Firefox</button>
+      <button class="tab-btn" onclick="showTab('paste')">Any browser</button>
+    </div>
+
+    <!-- CHROME TAB -->
+    <div class="tab-content active" id="tab-chrome">
+      <div style="text-align:center; margin-bottom:1.5rem;">
+        <a class="bookmarklet-link" id="bookmarklet-btn" href="javascript:%28function%28%29%7Bif%28document.getElementById%28%22gpt2claude-panel%22%29%29%7Bvar%20existing%3Ddocument.getElementById%28%22gpt2claude-panel%22%29%3Bexisting.style.animation%3D%22g2c-shake%200.3s%20ease-in-out%22%3BsetTimeout%28function%28%29%7Bexisting.style.animation%3D%22%22%3B%7D%2C300%29%3Breturn%3B%7D%0Avar%20style%3Ddocument.createElement%28%22style%22%29%3Bstyle.textContent%3D%22%5C%0A%20%20%20%20%40keyframes%20g2c-fadein%20%7B%20from%20%7B%20opacity%3A%200%3B%20transform%3A%20translateY%2820px%29%20scale%280.95%29%3B%20%7D%20to%20%7B%20opacity%3A%201%3B%20transform%3A%20translateY%280%29%20scale%281%29%3B%20%7D%20%7D%5C%0A%20%20%20%20%40keyframes%20g2c-shake%20%7B%200%25%2C100%25%20%7B%20transform%3A%20translateX%280%29%3B%20%7D%2025%25%20%7B%20transform%3A%20translateX%28-5px%29%3B%20%7D%2075%25%20%7B%20transform%3A%20translateX%285px%29%3B%20%7D%20%7D%5C%0A%20%20%20%20%40keyframes%20g2c-spin%20%7B%20to%20%7B%20transform%3A%20rotate%28360deg%29%3B%20%7D%20%7D%5C%0A%20%20%20%20%40keyframes%20g2c-pulse%20%7B%200%25%2C100%25%20%7B%20opacity%3A%201%3B%20%7D%2050%25%20%7B%20opacity%3A%200.5%3B%20%7D%20%7D%5C%0A%20%20%20%20%23gpt2claude-panel%20%7B%20position%3A%20fixed%3B%20top%3A%2050%25%3B%20right%3A%2024px%3B%20transform%3A%20translateY%28-50%25%29%3B%20width%3A%20340px%3B%20background%3A%20%230a0a0b%3B%20border%3A%201px%20solid%20%232a2a30%3B%20border-radius%3A%2016px%3B%20box-shadow%3A%200%2025px%2060px%20rgba%280%2C0%2C0%2C0.6%29%2C%200%200%200%201px%20rgba%28255%2C255%2C255%2C0.05%29%3B%20z-index%3A%20999999%3B%20font-family%3A%20-apple-system%2C%20BlinkMacSystemFont%2C%20%27Segoe%20UI%27%2C%20sans-serif%3B%20color%3A%20%23e8e8ec%3B%20animation%3A%20g2c-fadein%200.3s%20ease-out%3B%20%7D%5C%0A%20%20%20%20%23gpt2claude-panel%20%2A%20%7B%20box-sizing%3A%20border-box%3B%20margin%3A%200%3B%20padding%3A%200%3B%20%7D%5C%0A%20%20%20%20.g2c-header%20%7B%20display%3A%20flex%3B%20justify-content%3A%20space-between%3B%20align-items%3A%20center%3B%20padding%3A%2016px%2020px%2012px%3B%20border-bottom%3A%201px%20solid%20%232a2a30%3B%20%7D%5C%0A%20%20%20%20.g2c-title%20%7B%20font-size%3A%2014px%3B%20font-weight%3A%20700%3B%20letter-spacing%3A%20-0.01em%3B%20%7D%5C%0A%20%20%20%20.g2c-title%20span.gpt%20%7B%20color%3A%20%23a0a0e0%3B%20%7D%5C%0A%20%20%20%20.g2c-title%20span.arrow%20%7B%20color%3A%20%23555%3B%20margin%3A%200%204px%3B%20%7D%5C%0A%20%20%20%20.g2c-title%20span.claude%20%7B%20color%3A%20%23d4a574%3B%20%7D%5C%0A%20%20%20%20.g2c-version%20%7B%20font-size%3A%2010px%3B%20color%3A%20%23555%3B%20font-weight%3A%20600%3B%20%7D%5C%0A%20%20%20%20.g2c-close%20%7B%20background%3A%20none%3B%20border%3A%20none%3B%20color%3A%20%23666%3B%20font-size%3A%2018px%3B%20cursor%3A%20pointer%3B%20padding%3A%204px%208px%3B%20border-radius%3A%206px%3B%20line-height%3A%201%3B%20%7D%5C%0A%20%20%20%20.g2c-close%3Ahover%20%7B%20background%3A%20%231c1c20%3B%20color%3A%20%23e8e8ec%3B%20%7D%5C%0A%20%20%20%20.g2c-body%20%7B%20padding%3A%2016px%2020px%3B%20%7D%5C%0A%20%20%20%20.g2c-btn%20%7B%20width%3A%20100%25%3B%20padding%3A%2012px%2016px%3B%20border%3A%201px%20solid%20%232a2a30%3B%20border-radius%3A%2010px%3B%20background%3A%20%23141416%3B%20color%3A%20%23e8e8ec%3B%20font-size%3A%2013px%3B%20font-weight%3A%20600%3B%20cursor%3A%20pointer%3B%20text-align%3A%20left%3B%20margin-bottom%3A%208px%3B%20display%3A%20flex%3B%20align-items%3A%20center%3B%20gap%3A%2010px%3B%20transition%3A%20all%200.15s%20ease%3B%20position%3A%20relative%3B%20overflow%3A%20hidden%3B%20%7D%5C%0A%20%20%20%20.g2c-btn%3Ahover%20%7B%20background%3A%20%231c1c20%3B%20border-color%3A%20%233a3a40%3B%20transform%3A%20translateY%28-1px%29%3B%20%7D%5C%0A%20%20%20%20.g2c-btn%3Aactive%20%7B%20transform%3A%20translateY%280%29%3B%20%7D%5C%0A%20%20%20%20.g2c-btn.running%20%7B%20pointer-events%3A%20none%3B%20border-color%3A%20%23d4a574%3B%20%7D%5C%0A%20%20%20%20.g2c-btn.done%20%7B%20border-color%3A%20%237eb8a0%3B%20%7D%5C%0A%20%20%20%20.g2c-btn.error%20%7B%20border-color%3A%20%23e07070%3B%20%7D%5C%0A%20%20%20%20.g2c-btn-icon%20%7B%20font-size%3A%2018px%3B%20width%3A%2024px%3B%20text-align%3A%20center%3B%20flex-shrink%3A%200%3B%20%7D%5C%0A%20%20%20%20.g2c-btn-text%20%7B%20flex%3A%201%3B%20%7D%5C%0A%20%20%20%20.g2c-btn-sub%20%7B%20font-size%3A%2011px%3B%20color%3A%20%23666%3B%20font-weight%3A%20400%3B%20margin-top%3A%202px%3B%20%7D%5C%0A%20%20%20%20.g2c-progress%20%7B%20margin-top%3A%206px%3B%20%7D%5C%0A%20%20%20%20.g2c-progress-bar%20%7B%20width%3A%20100%25%3B%20height%3A%204px%3B%20background%3A%20%231c1c20%3B%20border-radius%3A%202px%3B%20overflow%3A%20hidden%3B%20%7D%5C%0A%20%20%20%20.g2c-progress-fill%20%7B%20height%3A%20100%25%3B%20background%3A%20linear-gradient%2890deg%2C%20%23d4a574%2C%20%23e8c49a%29%3B%20border-radius%3A%202px%3B%20transition%3A%20width%200.3s%20ease%3B%20width%3A%200%25%3B%20%7D%5C%0A%20%20%20%20.g2c-progress-text%20%7B%20font-size%3A%2011px%3B%20color%3A%20%238e8e96%3B%20margin-top%3A%204px%3B%20%7D%5C%0A%20%20%20%20.g2c-log%20%7B%20margin-top%3A%2012px%3B%20max-height%3A%20120px%3B%20overflow-y%3A%20auto%3B%20background%3A%20%230d0d0e%3B%20border%3A%201px%20solid%20%231c1c20%3B%20border-radius%3A%208px%3B%20padding%3A%208px%2010px%3B%20font-family%3A%20%27SF%20Mono%27%2C%20%27Consolas%27%2C%20monospace%3B%20font-size%3A%2011px%3B%20line-height%3A%201.5%3B%20color%3A%20%238e8e96%3B%20display%3A%20none%3B%20%7D%5C%0A%20%20%20%20.g2c-log.visible%20%7B%20display%3A%20block%3B%20%7D%5C%0A%20%20%20%20.g2c-log-entry%20%7B%20white-space%3A%20nowrap%3B%20overflow%3A%20hidden%3B%20text-overflow%3A%20ellipsis%3B%20%7D%5C%0A%20%20%20%20.g2c-log-entry.error%20%7B%20color%3A%20%23e07070%3B%20%7D%5C%0A%20%20%20%20.g2c-log-entry.success%20%7B%20color%3A%20%237eb8a0%3B%20%7D%5C%0A%20%20%20%20.g2c-footer%20%7B%20padding%3A%2012px%2020px%3B%20border-top%3A%201px%20solid%20%231c1c20%3B%20display%3A%20flex%3B%20justify-content%3A%20space-between%3B%20align-items%3A%20center%3B%20%7D%5C%0A%20%20%20%20.g2c-footer-text%20%7B%20font-size%3A%2010px%3B%20color%3A%20%23444%3B%20%7D%5C%0A%20%20%20%20.g2c-footer-link%20%7B%20font-size%3A%2010px%3B%20color%3A%20%23d4a574%3B%20text-decoration%3A%20none%3B%20%7D%5C%0A%20%20%20%20.g2c-footer-link%3Ahover%20%7B%20text-decoration%3A%20underline%3B%20%7D%5C%0A%20%20%20%20.g2c-spinner%20%7B%20display%3A%20inline-block%3B%20width%3A%2014px%3B%20height%3A%2014px%3B%20border%3A%202px%20solid%20%23333%3B%20border-top-color%3A%20%23d4a574%3B%20border-radius%3A%2050%25%3B%20animation%3A%20g2c-spin%200.6s%20linear%20infinite%3B%20%7D%5C%0A%20%20%20%20.g2c-toggle-log%20%7B%20background%3A%20none%3B%20border%3A%20none%3B%20color%3A%20%23555%3B%20font-size%3A%2011px%3B%20cursor%3A%20pointer%3B%20padding%3A%204px%200%3B%20margin-top%3A%208px%3B%20%7D%5C%0A%20%20%20%20.g2c-toggle-log%3Ahover%20%7B%20color%3A%20%23999%3B%20%7D%5C%0A%20%20%20%20.g2c-drag-handle%20%7B%20cursor%3A%20move%3B%20%7D%5C%0A%20%20%22%3Bdocument.head.appendChild%28style%29%3Bvar%20panel%3Ddocument.createElement%28%22div%22%29%3Bpanel.id%3D%22gpt2claude-panel%22%3Bpanel.innerHTML%3D%27%5C%0A%20%20%20%20%3Cdiv%20class%3D%22g2c-header%20g2c-drag-handle%22%3E%5C%0A%20%20%20%20%20%20%3Cdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-title%22%3E%3Cspan%20class%3D%22gpt%22%3EGPT%3C%2Fspan%3E%3Cspan%20class%3D%22arrow%22%3E%5Cu2192%3C%2Fspan%3E%3Cspan%20class%3D%22claude%22%3EClaude%3C%2Fspan%3E%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-version%22%3EMigration%20Kit%20v2.0%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3Cbutton%20class%3D%22g2c-close%22%20id%3D%22g2c-close%22%3E%5Cu00D7%3C%2Fbutton%3E%5C%0A%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%3Cdiv%20class%3D%22g2c-body%22%3E%5C%0A%20%20%20%20%20%20%3Cbutton%20class%3D%22g2c-btn%22%20id%3D%22g2c-btn-memory%22%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-icon%22%3E%5CuD83E%5CuDDE0%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-text%22%3E%5C%0A%20%20%20%20%20%20%20%20%20%20Export%20Memories%5C%0A%20%20%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-sub%22%3EFacts%20ChatGPT%20learned%20about%20you%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3C%2Fbutton%3E%5C%0A%20%20%20%20%20%20%3Cbutton%20class%3D%22g2c-btn%22%20id%3D%22g2c-btn-convos%22%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-icon%22%3E%5CuD83D%5CuDCAC%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-text%22%3E%5C%0A%20%20%20%20%20%20%20%20%20%20Export%20All%20Conversations%5C%0A%20%20%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-sub%22%3EEvery%20chat%20with%20full%20history%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3C%2Fbutton%3E%5C%0A%20%20%20%20%20%20%3Cbutton%20class%3D%22g2c-btn%22%20id%3D%22g2c-btn-instructions%22%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-icon%22%3E%5Cu2699%5CuFE0F%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-text%22%3E%5C%0A%20%20%20%20%20%20%20%20%20%20Export%20Instructions%5C%0A%20%20%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-btn-sub%22%3ECustom%20instructions%20%26amp%3B%20settings%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3C%2Fbutton%3E%5C%0A%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-progress%22%20id%3D%22g2c-progress%22%20style%3D%22display%3Anone%3B%22%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-progress-bar%22%3E%3Cdiv%20class%3D%22g2c-progress-fill%22%20id%3D%22g2c-progress-fill%22%3E%3C%2Fdiv%3E%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-progress-text%22%20id%3D%22g2c-progress-text%22%3E%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%20%20%3Cbutton%20class%3D%22g2c-toggle-log%22%20id%3D%22g2c-toggle-log%22%3EShow%20log%20%5Cu25BC%3C%2Fbutton%3E%5C%0A%20%20%20%20%20%20%3Cdiv%20class%3D%22g2c-log%22%20id%3D%22g2c-log%22%3E%3C%2Fdiv%3E%5C%0A%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%20%20%3Cdiv%20class%3D%22g2c-footer%22%3E%5C%0A%20%20%20%20%20%20%3Cspan%20class%3D%22g2c-footer-text%22%3EAll%20data%20stays%20in%20your%20browser%3C%2Fspan%3E%5C%0A%20%20%20%20%20%20%3Ca%20class%3D%22g2c-footer-link%22%20href%3D%22https%3A%2F%2Fgithub.com%2FSiamsnus%2FGPT2Claude-Migration-Kit%22%20target%3D%22_blank%22%3EGitHub%3C%2Fa%3E%5C%0A%20%20%20%20%3C%2Fdiv%3E%5C%0A%20%20%27%3Bdocument.body.appendChild%28panel%29%3Bvar%20isDragging%3Dfalse%3Bvar%20dragOffsetX%3D0%3Bvar%20dragOffsetY%3D0%3Bvar%20header%3Dpanel.querySelector%28%22.g2c-drag-handle%22%29%3Bheader.addEventListener%28%22mousedown%22%2Cfunction%28e%29%7Bif%28e.target.classList.contains%28%22g2c-close%22%29%29return%3BisDragging%3Dtrue%3Bvar%20rect%3Dpanel.getBoundingClientRect%28%29%3BdragOffsetX%3De.clientX-rect.left%3BdragOffsetY%3De.clientY-rect.top%3Bpanel.style.transition%3D%22none%22%3Be.preventDefault%28%29%3B%7D%29%3Bdocument.addEventListener%28%22mousemove%22%2Cfunction%28e%29%7Bif%28%21isDragging%29return%3Bpanel.style.right%3D%22auto%22%3Bpanel.style.transform%3D%22none%22%3Bpanel.style.left%3D%28e.clientX-dragOffsetX%29%2B%22px%22%3Bpanel.style.top%3D%28e.clientY-dragOffsetY%29%2B%22px%22%3B%7D%29%3Bdocument.addEventListener%28%22mouseup%22%2Cfunction%28%29%7BisDragging%3Dfalse%3Bpanel.style.transition%3D%22%22%3B%7D%29%3Bvar%20logEl%3Ddocument.getElementById%28%22g2c-log%22%29%3Bvar%20progressEl%3Ddocument.getElementById%28%22g2c-progress%22%29%3Bvar%20progressFill%3Ddocument.getElementById%28%22g2c-progress-fill%22%29%3Bvar%20progressText%3Ddocument.getElementById%28%22g2c-progress-text%22%29%3Bfunction%20log%28msg%2Ctype%29%7Bvar%20entry%3Ddocument.createElement%28%22div%22%29%3Bentry.className%3D%22g2c-log-entry%22%2B%28type%3F%22%20%22%2Btype%3A%22%22%29%3Bentry.textContent%3Dmsg%3BlogEl.appendChild%28entry%29%3BlogEl.scrollTop%3DlogEl.scrollHeight%3B%7D%0Afunction%20setProgress%28pct%2Ctext%29%7BprogressEl.style.display%3D%22block%22%3BprogressFill.style.width%3Dpct%2B%22%25%22%3Bif%28text%29progressText.textContent%3Dtext%3B%7D%0Afunction%20setButtonState%28btn%2Cstate%2Clabel%29%7Bbtn.className%3D%22g2c-btn%20%22%2Bstate%3Bvar%20iconEl%3Dbtn.querySelector%28%22.g2c-btn-icon%22%29%3Bif%28state%3D%3D%3D%22running%22%29%7BiconEl.innerHTML%3D%27%3Cdiv%20class%3D%22g2c-spinner%22%3E%3C%2Fdiv%3E%27%3B%7Delse%20if%28state%3D%3D%3D%22done%22%29%7BiconEl.textContent%3D%22%5Cu2705%22%3B%7Delse%20if%28state%3D%3D%3D%22error%22%29%7BiconEl.textContent%3D%22%5Cu274C%22%3B%7D%0Aif%28label%29%7Bbtn.querySelector%28%22.g2c-btn-sub%22%29.textContent%3Dlabel%3B%7D%7D%0Afunction%20downloadFile%28content%2Cfilename%2Ctype%29%7Bvar%20blob%3Dnew%20Blob%28%5Bcontent%5D%2C%7Btype%3Atype%7C%7C%22text%2Fplain%22%7D%29%3Bvar%20url%3DURL.createObjectURL%28blob%29%3Bvar%20a%3Ddocument.createElement%28%22a%22%29%3Ba.href%3Durl%3Ba.download%3Dfilename%3Bdocument.body.appendChild%28a%29%3Ba.click%28%29%3Bdocument.body.removeChild%28a%29%3BURL.revokeObjectURL%28url%29%3Blog%28%22Downloaded%3A%20%22%2Bfilename%2C%22success%22%29%3B%7D%0Avar%20cachedToken%3Dnull%3Basync%20function%20getToken%28%29%7Bif%28cachedToken%29return%20cachedToken%3Blog%28%22Authenticating...%22%29%3Bvar%20resp%3Dawait%20fetch%28%22https%3A%2F%2Fchatgpt.com%2Fapi%2Fauth%2Fsession%22%2C%7Bcredentials%3A%22include%22%7D%29%3Bif%28resp.status%21%3D%3D200%29%7Bthrow%20new%20Error%28%22Auth%20failed%20%28HTTP%20%22%2Bresp.status%2B%22%29.%20Are%20you%20logged%20in%3F%22%29%3B%7D%0Avar%20data%3Dawait%20resp.json%28%29%3Bif%28%21data.accessToken%29%7Bthrow%20new%20Error%28%22No%20token%20found.%20Please%20refresh%20chatgpt.com%20and%20try%20again.%22%29%3B%7D%0AcachedToken%3Ddata.accessToken%3Blog%28%22Authenticated%20OK%22%29%3Breturn%20cachedToken%3B%7D%0Aasync%20function%20exportMemories%28%29%7Bvar%20btn%3Ddocument.getElementById%28%22g2c-btn-memory%22%29%3BsetButtonState%28btn%2C%22running%22%2C%22Exporting...%22%29%3Btry%7Bvar%20token%3Dawait%20getToken%28%29%3Blog%28%22Fetching%20memories...%22%29%3Bvar%20resp%3Dawait%20fetch%28%22https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Fmemories%22%2C%7Bcredentials%3A%22include%22%2Cheaders%3A%7B%22Authorization%22%3A%22Bearer%20%22%2Btoken%7D%7D%29%3Bif%28resp.status%21%3D%3D200%29%7Bthrow%20new%20Error%28%22Could%20not%20fetch%20memories%20%28HTTP%20%22%2Bresp.status%2B%22%29%22%29%3B%7D%0Avar%20data%3Dawait%20resp.json%28%29%3Bvar%20memories%3Ddata.memories%7C%7Cdata.results%7C%7Cdata%3Bvar%20md%3D%22%23%20ChatGPT%20Memory%20Export%5Cn%22%3Bmd%2B%3D%22%23%20Exported%3A%20%22%2Bnew%20Date%28%29.toISOString%28%29%2B%22%5Cn%22%3Bmd%2B%3D%22%23%20Tool%3A%20GPT2Claude%20Migration%20Kit%20v2.0%5Cn%5Cn%22%3Bvar%20count%3D0%3Bif%28Array.isArray%28memories%29%29%7Bcount%3Dmemories.length%3Bfor%28var%20i%3D0%3Bi%3Cmemories.length%3Bi%2B%2B%29%7Bvar%20m%3Dmemories%5Bi%5D%3Bvar%20content%3Dm.content%7C%7Cm.value%7C%7Cm.text%7C%7Cm.memory%7C%7CJSON.stringify%28m%29%3Bmd%2B%3D%28i%2B1%29%2B%22.%20%22%2Bcontent%2B%22%5Cn%22%3B%7D%7Delse%7Bmd%2B%3DJSON.stringify%28memories%2Cnull%2C2%29%3B%7D%0Alog%28%22Found%20%22%2Bcount%2B%22%20memories%22%29%3BdownloadFile%28md%2C%22chatgpt_memories.md%22%2C%22text%2Fmarkdown%22%29%3BsetButtonState%28btn%2C%22done%22%2Ccount%2B%22%20memories%20exported%22%29%3B%7Dcatch%28err%29%7Blog%28%22Memory%20export%20failed%3A%20%22%2Berr.message%2C%22error%22%29%3BsetButtonState%28btn%2C%22error%22%2Cerr.message%29%3B%7D%7D%0Aasync%20function%20exportConversations%28%29%7Bvar%20btn%3Ddocument.getElementById%28%22g2c-btn-convos%22%29%3BsetButtonState%28btn%2C%22running%22%2C%22Getting%20conversation%20list...%22%29%3Btry%7Bvar%20token%3Dawait%20getToken%28%29%3Bvar%20headers%3D%7B%22Authorization%22%3A%22Bearer%20%22%2Btoken%7D%3Bvar%20allConvos%3D%5B%5D%3Bvar%20offset%3D0%3Blog%28%22Fetching%20conversation%20list...%22%29%3Bwhile%28true%29%7Bvar%20listResp%3Dawait%20fetch%28%22https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Fconversations%3Foffset%3D%22%2Boffset%2B%22%26limit%3D100%26order%3Dupdated%22%2C%7Bcredentials%3A%22include%22%2Cheaders%3Aheaders%7D%29%3Bif%28listResp.status%21%3D%3D200%29%7Bthrow%20new%20Error%28%22Could%20not%20get%20conversations%20%28HTTP%20%22%2BlistResp.status%2B%22%29%22%29%3B%7D%0Avar%20listData%3Dawait%20listResp.json%28%29%3Bvar%20items%3DlistData.items%7C%7C%5B%5D%3Blog%28%22Batch%3A%20%22%2Bitems.length%2B%22%20conversations%20%28offset%20%22%2Boffset%2B%22%29%22%29%3Bfor%28var%20j%3D0%3Bj%3Citems.length%3Bj%2B%2B%29%7BallConvos.push%28items%5Bj%5D%29%3B%7D%0Aoffset%2B%3Ditems.length%3Bif%28items.length%3C100%29break%3Bawait%20new%20Promise%28function%28r%29%7BsetTimeout%28r%2C500%29%3B%7D%29%3B%7D%0Alog%28%22Total%20conversations%3A%20%22%2BallConvos.length%29%3BsetButtonState%28btn%2C%22running%22%2C%22Downloading%200%2F%22%2BallConvos.length%2B%22...%22%29%3Bvar%20fullExport%3D%7Bexport_date%3Anew%20Date%28%29.toISOString%28%29%2Ctool%3A%22GPT2Claude%20Migration%20Kit%20v2.0%22%2Ctotal_conversations%3AallConvos.length%2Cconversations%3A%5B%5D%7D%3Bvar%20successCount%3D0%3Bvar%20errorCount%3D0%3Bfor%28var%20i%3D0%3Bi%3CallConvos.length%3Bi%2B%2B%29%7Bvar%20c%3DallConvos%5Bi%5D%3Bvar%20title%3Dc.title%7C%7C%22Untitled%22%3Bvar%20pct%3DMath.round%28%28%28i%2B1%29%2FallConvos.length%29%2A100%29%3BsetProgress%28pct%2C%28i%2B1%29%2B%22%20%2F%20%22%2BallConvos.length%2B%22%20%E2%80%94%20%22%2Btitle%29%3BsetButtonState%28btn%2C%22running%22%2C%22Downloading%20%22%2B%28i%2B1%29%2B%22%2F%22%2BallConvos.length%2B%22...%22%29%3Btry%7Bvar%20convoResp%3Dawait%20fetch%28%22https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Fconversation%2F%22%2Bc.id%2C%7Bcredentials%3A%22include%22%2Cheaders%3Aheaders%7D%29%3Bif%28convoResp.status%3D%3D%3D429%29%7Blog%28%22Rate%20limited%2C%20waiting%2030s...%22%2C%22error%22%29%3BsetButtonState%28btn%2C%22running%22%2C%22Rate%20limited%20%E2%80%94%20waiting%2030s...%22%29%3Bawait%20new%20Promise%28function%28r%29%7BsetTimeout%28r%2C30000%29%3B%7D%29%3Bi--%3Bcontinue%3B%7D%0Aif%28convoResp.status%21%3D%3D200%29%7Blog%28%22Skipped%3A%20%22%2Btitle%2B%22%20%28HTTP%20%22%2BconvoResp.status%2B%22%29%22%2C%22error%22%29%3BerrorCount%2B%2B%3BfullExport.conversations.push%28%7Bid%3Ac.id%2Ctitle%3Atitle%2Cerror%3A%22HTTP%20%22%2BconvoResp.status%7D%29%3Bcontinue%3B%7D%0Avar%20detail%3Dawait%20convoResp.json%28%29%3Bvar%20messages%3D%5B%5D%3Bif%28detail.mapping%29%7Bvar%20nodeKeys%3DObject.keys%28detail.mapping%29%3Bvar%20nodes%3D%5B%5D%3Bfor%28var%20k%3D0%3Bk%3CnodeKeys.length%3Bk%2B%2B%29%7Bnodes.push%28detail.mapping%5BnodeKeys%5Bk%5D%5D%29%3B%7D%0Anodes.sort%28function%28a%2Cb%29%7Bvar%20ta%3D%28a.message%26%26a.message.create_time%29%3Fa.message.create_time%3A0%3Bvar%20tb%3D%28b.message%26%26b.message.create_time%29%3Fb.message.create_time%3A0%3Breturn%20ta-tb%3B%7D%29%3Bfor%28var%20n%3D0%3Bn%3Cnodes.length%3Bn%2B%2B%29%7Bvar%20node%3Dnodes%5Bn%5D%3Bif%28node.message%26%26node.message.content%29%7Bvar%20parts%3Dnode.message.content.parts%3Bvar%20text%3D%22%22%3Bif%28Array.isArray%28parts%29%29%7Bvar%20textParts%3D%5B%5D%3Bfor%28var%20p%3D0%3Bp%3Cparts.length%3Bp%2B%2B%29%7Bif%28typeof%20parts%5Bp%5D%3D%3D%3D%22string%22%29%7BtextParts.push%28parts%5Bp%5D%29%3B%7D%7D%0Atext%3DtextParts.join%28%22%5Cn%22%29%3B%7Delse%7Btext%3DJSON.stringify%28node.message.content%29%3B%7D%0Aif%28text.trim%28%29%21%3D%3D%22%22%29%7Bvar%20role%3D%22unknown%22%3Bif%28node.message.author%26%26node.message.author.role%29%7Brole%3Dnode.message.author.role%3B%7D%0Avar%20model%3Dnull%3Bif%28node.message.metadata%26%26node.message.metadata.model_slug%29%7Bmodel%3Dnode.message.metadata.model_slug%3B%7D%0Amessages.push%28%7Brole%3Arole%2Ccontent%3Atext%2Ctimestamp%3Anode.message.create_time%7C%7Cnull%2Cmodel%3Amodel%7D%29%3B%7D%7D%7D%7D%0AfullExport.conversations.push%28%7Bid%3Ac.id%2Ctitle%3Atitle%2Ccreate_time%3Ac.create_time%2Cupdate_time%3Ac.update_time%2Cmodel%3Adetail.default_model_slug%7C%7Cnull%2Cmessage_count%3Amessages.length%2Cmessages%3Amessages%7D%29%3BsuccessCount%2B%2B%3Bif%28i%2525%3D%3D%3D0%26%26i%3E0%29%7Blog%28%22Progress%3A%20%22%2B%28i%2B1%29%2B%22%2F%22%2BallConvos.length%29%3B%7D%7Dcatch%28err%29%7Blog%28%22Error%3A%20%22%2Btitle%2B%22%20%E2%80%94%20%22%2Berr.message%2C%22error%22%29%3BerrorCount%2B%2B%3BfullExport.conversations.push%28%7Bid%3Ac.id%2Ctitle%3Atitle%2Cerror%3Aerr.message%7D%29%3B%7D%0Aawait%20new%20Promise%28function%28r%29%7BsetTimeout%28r%2C1000%29%3B%7D%29%3B%7D%0Avar%20json%3DJSON.stringify%28fullExport%2Cnull%2C2%29%3Bvar%20sizeMB%3D%28json.length%2F1024%2F1024%29.toFixed%281%29%3BdownloadFile%28json%2C%22chatgpt_all_conversations.json%22%2C%22application%2Fjson%22%29%3BsetProgress%28100%2C%22Complete%21%20%22%2BsuccessCount%2B%22%20conversations%2C%20~%22%2BsizeMB%2B%22%20MB%22%29%3BsetButtonState%28btn%2C%22done%22%2CsuccessCount%2B%22%20conversations%20exported%22%29%3Blog%28%22DONE%21%20%22%2BsuccessCount%2B%22%20conversations%2C%20%22%2BerrorCount%2B%22%20errors%2C%20~%22%2BsizeMB%2B%22%20MB%22%2C%22success%22%29%3B%7Dcatch%28err%29%7Blog%28%22Conversation%20export%20failed%3A%20%22%2Berr.message%2C%22error%22%29%3BsetButtonState%28btn%2C%22error%22%2Cerr.message%29%3B%7D%7D%0Aasync%20function%20exportInstructions%28%29%7Bvar%20btn%3Ddocument.getElementById%28%22g2c-btn-instructions%22%29%3BsetButtonState%28btn%2C%22running%22%2C%22Exporting...%22%29%3Btry%7Bvar%20token%3Dawait%20getToken%28%29%3Bvar%20headers%3D%7B%22Authorization%22%3A%22Bearer%20%22%2Btoken%7D%3Bvar%20endpoints%3D%5B%7Bname%3A%22custom_instructions%22%2Curl%3A%22https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Fuser_system_messages%22%7D%2C%7Bname%3A%22settings%22%2Curl%3A%22https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Fsettings%22%7D%5D%3Bvar%20result%3D%7Bexport_date%3Anew%20Date%28%29.toISOString%28%29%2Ctool%3A%22GPT2Claude%20Migration%20Kit%20v2.0%22%2Cdata%3A%7B%7D%7D%3Bfor%28var%20i%3D0%3Bi%3Cendpoints.length%3Bi%2B%2B%29%7Bvar%20ep%3Dendpoints%5Bi%5D%3Blog%28%22Fetching%20%22%2Bep.name%2B%22...%22%29%3Btry%7Bvar%20resp%3Dawait%20fetch%28ep.url%2C%7Bcredentials%3A%22include%22%2Cheaders%3Aheaders%7D%29%3Bif%28resp.status%3D%3D%3D200%29%7Bresult.data%5Bep.name%5D%3Dawait%20resp.json%28%29%3Blog%28%22Got%3A%20%22%2Bep.name%29%3B%7Delse%7Bresult.data%5Bep.name%5D%3D%7Berror%3A%22HTTP%20%22%2Bresp.status%7D%3Blog%28ep.name%2B%22%3A%20HTTP%20%22%2Bresp.status%2C%22error%22%29%3B%7D%7Dcatch%28e%29%7Bresult.data%5Bep.name%5D%3D%7Berror%3Ae.message%7D%3Blog%28ep.name%2B%22%20error%3A%20%22%2Be.message%2C%22error%22%29%3B%7D%7D%0AdownloadFile%28JSON.stringify%28result%2Cnull%2C2%29%2C%22chatgpt_instructions.json%22%2C%22application%2Fjson%22%29%3BsetButtonState%28btn%2C%22done%22%2C%22Instructions%20exported%22%29%3B%7Dcatch%28err%29%7Blog%28%22Instructions%20export%20failed%3A%20%22%2Berr.message%2C%22error%22%29%3BsetButtonState%28btn%2C%22error%22%2Cerr.message%29%3B%7D%7D%0Adocument.getElementById%28%22g2c-close%22%29.addEventListener%28%22click%22%2Cfunction%28%29%7Bpanel.style.animation%3D%22g2c-fadein%200.2s%20ease-out%20reverse%22%3BsetTimeout%28function%28%29%7Bpanel.remove%28%29%3Bstyle.remove%28%29%3B%7D%2C200%29%3B%7D%29%3Bdocument.getElementById%28%22g2c-btn-memory%22%29.addEventListener%28%22click%22%2CexportMemories%29%3Bdocument.getElementById%28%22g2c-btn-convos%22%29.addEventListener%28%22click%22%2CexportConversations%29%3Bdocument.getElementById%28%22g2c-btn-instructions%22%29.addEventListener%28%22click%22%2CexportInstructions%29%3Bdocument.getElementById%28%22g2c-toggle-log%22%29.addEventListener%28%22click%22%2Cfunction%28%29%7Bvar%20logVisible%3DlogEl.classList.contains%28%22visible%22%29%3BlogEl.classList.toggle%28%22visible%22%29%3Bthis.textContent%3DlogVisible%3F%22Show%20log%20%5Cu25BC%22%3A%22Hide%20log%20%5Cu25B2%22%3B%7D%29%3Blog%28%22Ready.%20Click%20a%20button%20to%20start%20exporting.%22%29%3B%7D%29%28%29%3B"
+           onclick="event.preventDefault();alert('Don\'t click — drag this button up to your bookmark bar!');">
+          📦 GPT→Claude Export
+        </a>
+        <p class="drag-hint"><strong>Drag</strong> the button above to your bookmark bar.<br>No bookmark bar? Press <strong>Ctrl+Shift+B</strong></p>
+      </div>
+      <div class="install-steps">
+        <div class="install-step"><div class="install-step-num">1</div><p>Drag the gold button above into your <strong>bookmark bar</strong></p></div>
+        <div class="install-step"><div class="install-step-num">2</div><p>Go to <strong>chatgpt.com</strong> and make sure you're logged in</p></div>
+        <div class="install-step"><div class="install-step-num">3</div><p>Click the <strong>GPT→Claude Export</strong> bookmark — a panel appears on the page</p></div>
+        <div class="install-step"><div class="install-step-num">4</div><p>Click the export buttons. Files download to your computer automatically.</p></div>
+      </div>
+    </div>
+
+    <!-- FIREFOX TAB -->
+    <div class="tab-content" id="tab-firefox">
+      <div class="install-steps">
+        <div class="install-step"><div class="install-step-num">1</div>
+          <div>
+            <p>Right-click your <strong>bookmark bar</strong> → click <strong>"Add Bookmark..."</strong></p>
+            <p style="font-size:0.8rem; color:#555; margin-top:0.25rem;">No bookmark bar? Press Ctrl+Shift+B to show it</p>
+          </div>
+        </div>
+        <div class="install-step"><div class="install-step-num">2</div>
+          <div>
+            <p>Set the <strong>Name</strong> to: <strong style="color:var(--accent);">GPT→Claude Export</strong></p>
+          </div>
+        </div>
+        <div class="install-step"><div class="install-step-num">3</div>
+          <div>
+            <p>Click the button below to copy the bookmark URL:</p>
+            <button class="action-btn" id="copy-bookmark-url" style="margin-top:0.5rem;">📋 Copy bookmark URL</button>
+            <p class="copy-confirm" id="copy-url-confirm">✅ Copied! Now paste it into the URL field.</p>
+          </div>
+        </div>
+        <div class="install-step"><div class="install-step-num">4</div>
+          <div>
+            <p>Paste (<strong>Ctrl+V</strong>) into the <strong>Location (URL)</strong> field → click <strong>Save</strong></p>
+          </div>
+        </div>
+        <div class="install-step"><div class="install-step-num">5</div>
+          <div>
+            <p>Go to <strong>chatgpt.com</strong>, log in, click your new bookmark. The export panel appears!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANY BROWSER / PASTE TAB -->
+    <div class="tab-content" id="tab-paste">
+      <div class="install-steps">
+        <div class="install-step"><div class="install-step-num">1</div><p>Go to <strong>chatgpt.com</strong> and log in</p></div>
+        <div class="install-step"><div class="install-step-num">2</div><p>Press <strong>F12</strong> on your keyboard → click the <strong>Console</strong> tab</p></div>
+        <div class="install-step"><div class="install-step-num">3</div>
+          <div>
+            <p>Click the button below to copy the export script:</p>
+            <button class="action-btn" id="copy-full-script" style="margin-top:0.5rem;">📋 Copy export script</button>
+            <p class="copy-confirm" id="copy-script-confirm">✅ Copied! Now paste into the console.</p>
+          </div>
+        </div>
+        <div class="install-step"><div class="install-step-num">4</div><p>Click inside the console, press <strong>Ctrl+V</strong> to paste, then press <strong>Enter</strong></p></div>
+        <div class="install-step"><div class="install-step-num">5</div><p>The export panel appears on the ChatGPT page. Click the buttons to export.</p></div>
+      </div>
+      <p style="font-size:0.8rem; color:#555; margin-top:1rem;">Firefox users: if you see a warning about pasting, type <strong>allow pasting</strong> and press Enter first.</p>
+    </div>
   </div>
 
+  <!-- ========== HOW TO USE ========== -->
   <div class="steps">
-    <h2>How to use</h2>
+    <h2>What happens when you run it</h2>
     <div class="step-list">
       <div class="step-item">
         <div class="step-num s1">1</div>
-        <div class="step-text"><h3>Go to chatgpt.com and log in</h3><p>Make sure you can see your conversations in the sidebar. Any plan works &mdash; Free, Plus, Team.</p></div>
+        <div class="step-text"><h3>A floating panel appears</h3><p>Dark panel on the right side of the ChatGPT page with three export buttons. You can drag it around.</p></div>
       </div>
       <div class="step-item">
         <div class="step-num s2">2</div>
-        <div class="step-text"><h3>Click the bookmark</h3><p>A dark floating panel appears on the right side of the page with three export buttons.</p></div>
+        <div class="step-text"><h3>Click each button to export</h3><p>Memories, conversations, and instructions. Each one downloads a file automatically. Conversations show a progress bar.</p></div>
       </div>
       <div class="step-item">
         <div class="step-num s3">3</div>
-        <div class="step-text"><h3>Click export, files download</h3><p>Each button exports one thing. Files save to your Downloads folder automatically. Upload them to Claude when done.</p></div>
+        <div class="step-text"><h3>Upload to Claude</h3><p>Go to <a href="https://claude.ai" style="color:var(--accent)">claude.ai</a> (or the desktop app: <strong>+</strong> → <strong>Add files</strong>) and upload the downloaded files.</p></div>
       </div>
     </div>
   </div>
 
+  <!-- ========== WHAT YOU GET ========== -->
   <div class="exports-section">
     <h2>What you get</h2>
     <div class="export-grid">
       <div class="export-card">
-        <div class="icon">&#x1F9E0;</div>
+        <div class="icon">🧠</div>
         <h3>Memories</h3>
         <p>Every fact ChatGPT memorized about you.</p>
         <span class="filename">chatgpt_memories.md</span>
       </div>
       <div class="export-card">
-        <div class="icon">&#x1F4AC;</div>
+        <div class="icon">💬</div>
         <h3>Conversations</h3>
-        <p>Every chat with full message history, timestamps, model info.</p>
+        <p>Every chat with full history, timestamps, model info.</p>
         <span class="filename">chatgpt_all_conversations.json</span>
       </div>
       <div class="export-card">
-        <div class="icon">&#x2699;&#xFE0F;</div>
+        <div class="icon">⚙️</div>
         <h3>Instructions</h3>
         <p>Custom instructions and settings.</p>
         <span class="filename">chatgpt_instructions.json</span>
@@ -138,108 +237,75 @@
     </div>
   </div>
 
+  <!-- ========== IMPORTING TO CLAUDE ========== -->
   <div class="exports-section" id="importing">
     <h2>Importing to Claude</h2>
     <div class="step-list">
       <div class="step-item">
         <div class="step-num s1">1</div>
         <div class="step-text">
-          <h3>Upload your memory file first</h3>
-          <p>Upload <strong>chatgpt_memories.md</strong> to <a href="https://claude.ai" style="color:var(--accent)">claude.ai</a> (or the Claude desktop app: <strong>+</strong> &rarr; <strong>Add files or photos</strong>) with this prompt:</p>
+          <h3>Upload memories first</h3>
+          <p>Upload <strong>chatgpt_memories.md</strong> with this prompt:</p>
           <p style="color:var(--accent); margin-top:0.5rem; font-style:italic;">"I just migrated from ChatGPT. This file contains all the facts and memories ChatGPT had stored about me. Please read through every item carefully and remember all of these facts about me. Confirm what you've learned and note if anything seems contradictory or outdated."</p>
         </div>
       </div>
       <div class="step-item">
         <div class="step-num s2">2</div>
         <div class="step-text">
-          <h3>Upload your conversations</h3>
-          <p>Upload <strong>chatgpt_all_conversations.json</strong> (zip it first if it's large &mdash; Claude accepts .zip) with this prompt:</p>
-          <p style="color:var(--accent); margin-top:0.5rem; font-style:italic;">"This is my complete ChatGPT conversation history. Please analyze it and create a structured summary: (1) Key ongoing projects or topics I frequently discussed, (2) Important decisions or conclusions we reached, (3) Any personal context, and (4) Anything time-sensitive or unfinished."</p>
+          <h3>Upload conversations</h3>
+          <p>Upload <strong>chatgpt_all_conversations.json</strong> (zip it if large) with this prompt:</p>
+          <p style="color:var(--accent); margin-top:0.5rem; font-style:italic;">"This is my complete ChatGPT conversation history. Please analyze it and create a structured summary: (1) Key ongoing projects, (2) Important decisions, (3) Personal context and preferences, (4) Anything unfinished I should pick up."</p>
         </div>
       </div>
       <div class="step-item">
         <div class="step-num s3">3</div>
         <div class="step-text">
-          <h3>Upload your instructions</h3>
+          <h3>Upload instructions</h3>
           <p>Upload <strong>chatgpt_instructions.json</strong> with this prompt:</p>
-          <p style="color:var(--accent); margin-top:0.5rem; font-style:italic;">"These are my custom instructions and settings from ChatGPT. Please review them and adapt your communication style to match my preferences."</p>
+          <p style="color:var(--accent); margin-top:0.5rem; font-style:italic;">"These are my custom instructions from ChatGPT. Please adapt your communication style to match my preferences."</p>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- ========== WHAT TO EXPECT ========== -->
   <div class="exports-section" id="expectations">
     <h2>What to expect after migrating</h2>
-    <div class="fallback-box" style="margin-bottom:1rem;">
+    <div class="fallback-box">
       <h3>Claude remembers the facts, but needs time to know <em>you</em></h3>
-      <p>Think of it like switching doctors. The new doctor has your complete medical file &mdash; every test, every diagnosis. But they don't <em>know</em> you yet. That takes a few visits.</p>
-      <p>Claude gets roughly <strong>70%</strong> from the import. The remaining 30% &mdash; your humor, communication style, what matters most &mdash; builds naturally over a couple of weeks.</p>
+      <p>Think of it like switching doctors. The new doctor has your complete file but doesn't <em>know</em> you yet. Claude gets roughly <strong>70%</strong> from the import. The rest — your humor, style, priorities — builds naturally over a couple of weeks.</p>
       <p style="margin-bottom:0;"><strong>The upside:</strong> Claude calibrates to who you are <em>now</em>, not who you were two years ago.</p>
     </div>
-    <div class="fallback-box" style="margin-bottom:1rem;">
+    <div class="fallback-box">
       <h3>Example conversations after import</h3>
-      <p style="margin-bottom:0.5rem; color:var(--text);"><strong>You:</strong> "Do you remember that sourdough recipe we worked on?"</p>
-      <p style="margin-bottom:0.75rem; color:var(--accent);"><strong>Claude:</strong> "Yes &mdash; the one with 78% hydration and the overnight cold proof. You said the crust was perfect but the crumb was too dense. We were going to try autolyse next. Want to tweak it?"</p>
-      <p style="margin-bottom:0.5rem; color:var(--text);"><strong>You:</strong> "What was that movie you recommended?"</p>
-      <p style="margin-bottom:0; color:var(--accent);"><strong>Claude:</strong> "You asked for sci-fi that doesn't treat the audience like idiots. I suggested Arrival, Primer, and Coherence. You watched Primer and said it melted your brain."</p>
-    </div>
-    <div class="fallback-box">
-      <h3>Pro tip: don't import everything if you don't need to</h3>
-      <p style="margin-bottom:0;">If you mostly used ChatGPT for casual chats, just upload the memories file. A focused memory is more useful than a cluttered one.</p>
+      <p style="color:var(--text);"><strong>You:</strong> "Remember that sourdough recipe we worked on?"</p>
+      <p style="color:var(--accent)"><strong>Claude:</strong> "Yes — 78% hydration, overnight cold proof. You said the crust was perfect but crumb too dense. We were going to try autolyse. Want to tweak it?"</p>
+      <p style="color:var(--text); margin-top:0.75rem;"><strong>You:</strong> "What was that movie you recommended?"</p>
+      <p style="color:var(--accent); margin-bottom:0;"><strong>Claude:</strong> "You asked for sci-fi that doesn't treat the audience like idiots. I suggested Arrival, Primer, and Coherence. You watched Primer and said it melted your brain."</p>
     </div>
   </div>
 
-  <div class="fallback">
-    <div class="fallback-box">
-      <h3>Bookmarklet not working?</h3>
-      <p>Some browsers block bookmarklets. Paste the script directly into the browser console instead:</p>
-      <p>1. Go to <strong>chatgpt.com</strong> and log in</p>
-      <p>2. Press <strong>F12</strong> &rarr; click <strong>Console</strong> tab</p>
-      <p style="margin-bottom: 0.75rem;">3. Click below to copy the full script, then paste (Ctrl+V) into the console and press Enter:</p>
-      <button class="copy-btn" id="copy-full-script">&#x1F4CB; Copy full script to clipboard</button>
-      <p id="copy-confirm" style="font-size: 0.8rem; color: var(--green); margin-top: 0.5rem; display: none;">Copied! Now paste into the console and press Enter.</p>
-    </div>
-  </div>
-
+  <!-- ========== FAQ ========== -->
   <div class="faq">
     <h2>Common questions</h2>
-    <div class="faq-item">
-      <h3>Is this safe? Where does my data go?</h3>
-      <p>Nowhere. Everything runs in your browser. Files save directly to your computer. No external servers. Source code is open on GitHub.</p>
-    </div>
-    <div class="faq-item">
-      <h3>How long does the conversation export take?</h3>
-      <p>About 1 second per conversation. 500 chats = ~10 minutes. Don't close the tab while running.</p>
-    </div>
-    <div class="faq-item">
-      <h3>Does this work with a free ChatGPT account?</h3>
-      <p>Yes. Free, Plus, Team, Enterprise &mdash; all work.</p>
-    </div>
-    <div class="faq-item">
-      <h3>The file is too large to upload to Claude</h3>
-      <p>Zip it first. Right-click &rarr; Send to &rarr; Compressed (zipped) folder. Claude accepts .zip uploads.</p>
-    </div>
-    <div class="faq-item">
-      <h3>The export stopped or I got an error</h3>
-      <p>Usually a rate limit. Wait a minute, refresh chatgpt.com, and try again. The tool handles rate limits automatically but occasionally needs a fresh start.</p>
-    </div>
-    <div class="faq-item">
-      <h3>Will OpenAI ban my account?</h3>
-      <p>This uses the same API the ChatGPT website uses. You're accessing your own data through your own login. That said, these are undocumented endpoints that could change.</p>
-    </div>
-    <div class="faq-item">
-      <h3>No existing extension does this?</h3>
-      <p>Extensions export conversations as formatted text. This tool exports raw data including <strong>memory items</strong>, message metadata, and custom instructions &mdash; everything needed for a real migration.</p>
-    </div>
+    <div class="faq-item"><h3>Is this safe?</h3><p>Everything runs in your browser. No data is sent anywhere. Files save directly to your computer. Source code is open on GitHub.</p></div>
+    <div class="faq-item"><h3>How long does the conversation export take?</h3><p>~1 second per conversation. 500 chats ≈ 10 minutes. Don't close the tab.</p></div>
+    <div class="faq-item"><h3>Works with free ChatGPT?</h3><p>Yes. Free, Plus, Team, Enterprise — all work.</p></div>
+    <div class="faq-item"><h3>File too large for Claude?</h3><p>Zip it first. Right-click → Compress. Claude accepts .zip uploads.</p></div>
+    <div class="faq-item"><h3>Export stopped or errored?</h3><p>Usually a rate limit. Wait a minute, refresh chatgpt.com, try again. The tool retries automatically.</p></div>
+    <div class="faq-item"><h3>Will OpenAI ban me?</h3><p>You're accessing your own data through your own login session, using the same API the website uses. That said, these are undocumented endpoints.</p></div>
+    <div class="faq-item"><h3>Why not just use a browser extension?</h3><p>Extensions export conversations as text. This tool exports <strong>memory items</strong>, message metadata, timestamps, model info, and custom instructions — everything needed for a real migration.</p></div>
   </div>
 
+  <!-- ========== FOOTER ========== -->
   <div class="footer">
-    <p>GPT&rarr;Claude Migration Kit &mdash; built with <a href="https://claude.ai">Claude</a> by <a href="https://www.siamsnus.com">Siamsnus</a></p>
-    <p>Open source under MIT License &mdash; <a href="https://github.com/Siamsnus/GPT2Claude-Migration-Kit">View source on GitHub</a></p>
-    <p style="margin-top: 0.75rem; font-size: 0.72rem; color: #444;">OpenAI's internal API endpoints may change without notice. Not affiliated with OpenAI or Anthropic.</p>
+    <p>GPT→Claude Migration Kit — built with <a href="https://claude.ai">Claude</a> by <a href="https://www.siamsnus.com">Siamsnus</a></p>
+    <p>Open source under MIT License — <a href="https://github.com/Siamsnus/GPT2Claude-Migration-Kit">View source on GitHub</a></p>
+    <p style="margin-top:0.75rem; font-size:0.72rem; color:#444;">OpenAI's internal API may change without notice. Not affiliated with OpenAI or Anthropic.</p>
   </div>
 </div>
 
+<!-- Full script stored here for copy button -->
 <script id="migrate-source" type="text/plain">
 // GPT2Claude Migration Kit v2.0
 // https://github.com/Siamsnus/GPT2Claude-Migration-Kit
@@ -725,17 +791,67 @@
 </script>
 
 <script>
-var copyBtn = document.getElementById("copy-full-script");
-if (copyBtn) {
-  copyBtn.addEventListener("click", function() {
-    var el = document.getElementById("migrate-source");
-    var code = el.textContent.trim();
-    navigator.clipboard.writeText(code).then(function() {
-      document.getElementById("copy-confirm").style.display = "block";
-      copyBtn.innerHTML = "&#x2705; Copied!";
+// Browser detection
+(function() {
+  var detect = document.getElementById("browser-detect");
+  var isFirefox = navigator.userAgent.indexOf("Firefox") > -1;
+  var isChrome = navigator.userAgent.indexOf("Chrome") > -1 && navigator.userAgent.indexOf("Edg") === -1;
+  var isEdge = navigator.userAgent.indexOf("Edg") > -1;
+  var isBrave = navigator.brave !== undefined;
+
+  if (isFirefox) {
+    detect.textContent = "🦊 Firefox detected — use the Firefox tab below";
+    showTab("firefox");
+  } else if (isBrave) {
+    detect.textContent = "🦁 Brave detected — drag the button below";
+    showTab("chrome");
+  } else if (isEdge) {
+    detect.textContent = "🌐 Edge detected — drag the button below";
+    showTab("chrome");
+  } else if (isChrome) {
+    detect.textContent = "✨ Chrome detected — drag the button below";
+    showTab("chrome");
+  }
+})();
+
+// Tab switching
+function showTab(name) {
+  var tabs = document.querySelectorAll(".tab-content");
+  var btns = document.querySelectorAll(".tab-btn");
+  for (var i = 0; i < tabs.length; i++) { tabs[i].classList.remove("active"); }
+  for (var i = 0; i < btns.length; i++) { btns[i].classList.remove("active"); }
+  document.getElementById("tab-" + name).classList.add("active");
+  var labels = {"chrome": 0, "firefox": 1, "paste": 2};
+  if (labels[name] !== undefined) btns[labels[name]].classList.add("active");
+}
+
+// Copy bookmark URL (for Firefox)
+var copyUrlBtn = document.getElementById("copy-bookmark-url");
+if (copyUrlBtn) {
+  copyUrlBtn.addEventListener("click", function() {
+    var href = document.getElementById("bookmarklet-btn").getAttribute("href");
+    navigator.clipboard.writeText(href).then(function() {
+      document.getElementById("copy-url-confirm").style.display = "block";
+      copyUrlBtn.innerHTML = "✅ Copied!";
       setTimeout(function() {
-        copyBtn.innerHTML = "&#x1F4CB; Copy full script to clipboard";
-        document.getElementById("copy-confirm").style.display = "none";
+        copyUrlBtn.innerHTML = "📋 Copy bookmark URL";
+        document.getElementById("copy-url-confirm").style.display = "none";
+      }, 4000);
+    });
+  });
+}
+
+// Copy full script (for console paste)
+var copyScriptBtn = document.getElementById("copy-full-script");
+if (copyScriptBtn) {
+  copyScriptBtn.addEventListener("click", function() {
+    var code = document.getElementById("migrate-source").textContent.trim();
+    navigator.clipboard.writeText(code).then(function() {
+      document.getElementById("copy-script-confirm").style.display = "block";
+      copyScriptBtn.innerHTML = "✅ Copied!";
+      setTimeout(function() {
+        copyScriptBtn.innerHTML = "📋 Copy export script";
+        document.getElementById("copy-script-confirm").style.display = "none";
       }, 4000);
     });
   });
