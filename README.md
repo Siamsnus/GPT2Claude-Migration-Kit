@@ -25,9 +25,9 @@ Don't want to read raw JSON? Open **[viewer.html](https://siamsnus.github.io/GPT
 - Browse all conversations by title and date
 - Sort by newest, oldest, alphabetical, or longest
 - Search across all messages instantly
-- Read conversations in a familiar chat format
+- Read conversations in a familiar chat format with rendered markdown
 
-Everything runs locally — no data is uploaded anywhere.
+Everything runs locally — no data is uploaded anywhere. For extra privacy, download `viewer.html` and open it offline — it works the same way, no internet needed.
 
 ## How to use
 
