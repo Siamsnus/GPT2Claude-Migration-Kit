@@ -195,17 +195,39 @@ function loadFile(file) {
     alert("Please select a JSON file.");
     return;
   }
-  dropZone.innerHTML = '<div class="loading"><div class="spinner"></div><br>Loading ' + file.name + '...</div>';
+  var sizeMB = (file.size / 1024 / 1024).toFixed(1);
+  dropZone.innerHTML = '<div class="loading"><div class="spinner"></div>' +
+    '<div style="margin-top:12px;font-size:0.95rem;font-weight:600;">Loading ' + escHtml(file.name) + '</div>' +
+    '<div style="font-size:0.78rem;color:var(--text-faint);margin-top:4px;">' + sizeMB + ' MB</div>' +
+    '<div style="width:280px;margin:16px auto 0;"><div style="width:100%;height:6px;background:var(--surface);border-radius:3px;overflow:hidden;">' +
+    '<div id="load-progress" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#e8c49a);border-radius:3px;transition:width 0.2s;"></div></div>' +
+    '<div id="load-status" style="font-size:0.75rem;color:var(--text-dim);margin-top:8px;font-family:var(--mono);">Reading file...</div></div></div>';
 
   var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      var data = JSON.parse(e.target.result);
-      processData(data);
-    } catch (err) {
-      alert("Error parsing JSON: " + err.message);
-      location.reload();
+  reader.onprogress = function(e) {
+    if (e.lengthComputable) {
+      var pct = Math.round((e.loaded / e.total) * 100);
+      var bar = document.getElementById("load-progress");
+      var status = document.getElementById("load-status");
+      if (bar) bar.style.width = pct + "%";
+      if (status) status.textContent = "Reading file... " + pct + "%";
     }
+  };
+  reader.onload = function(e) {
+    var bar = document.getElementById("load-progress");
+    var status = document.getElementById("load-status");
+    if (bar) bar.style.width = "100%";
+    if (status) status.textContent = "Parsing JSON... (this may take a moment)";
+    // Use setTimeout to let the UI update before blocking JSON.parse
+    setTimeout(function() {
+      try {
+        var data = JSON.parse(e.target.result);
+        processData(data);
+      } catch (err) {
+        alert("Error parsing JSON: " + err.message);
+        location.reload();
+      }
+    }, 50);
   };
   reader.readAsText(file);
 }
