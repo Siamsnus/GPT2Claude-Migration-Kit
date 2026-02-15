@@ -19,43 +19,44 @@
     @keyframes g2c-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }\
     @keyframes g2c-spin { to { transform: rotate(360deg); } }\
     @keyframes g2c-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }\
-    #gpt2claude-panel { position: fixed; top: 50%; right: 24px; transform: translateY(-50%); width: 340px; background: #0a0a0b; border: 1px solid #2a2a30; border-radius: 16px; box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05); z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #e8e8ec; animation: g2c-fadein 0.3s ease-out; }\
+    #gpt2claude-panel { position: fixed; top: 50%; right: 24px; transform: translateY(-50%); width: 360px; background: #1a1a1f; border: 1px solid #333340; border-radius: 16px; box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #e8e8ec; animation: g2c-fadein 0.3s ease-out; }\
     #gpt2claude-panel * { box-sizing: border-box; margin: 0; padding: 0; }\
-    .g2c-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 12px; border-bottom: 1px solid #2a2a30; }\
-    .g2c-title { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }\
+    .g2c-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px 14px; border-bottom: 1px solid #2a2a35; background: #1e1e24; border-radius: 16px 16px 0 0; }\
+    .g2c-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }\
     .g2c-title span.gpt { color: #a0a0e0; }\
     .g2c-title span.arrow { color: #555; margin: 0 4px; }\
     .g2c-title span.claude { color: #d4a574; }\
-    .g2c-version { font-size: 10px; color: #555; font-weight: 600; }\
-    .g2c-close { background: none; border: none; color: #666; font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; line-height: 1; }\
-    .g2c-close:hover { background: #1c1c20; color: #e8e8ec; }\
-    .g2c-body { padding: 16px 20px; }\
-    .g2c-btn { width: 100%; padding: 12px 16px; border: 1px solid #2a2a30; border-radius: 10px; background: #141416; color: #e8e8ec; font-size: 13px; font-weight: 600; cursor: pointer; text-align: left; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; transition: all 0.15s ease; position: relative; overflow: hidden; }\
-    .g2c-btn:hover { background: #1c1c20; border-color: #3a3a40; transform: translateY(-1px); }\
+    .g2c-version { font-size: 10px; color: #666; font-weight: 600; margin-top: 2px; }\
+    .g2c-close { background: none; border: none; color: #777; font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 6px; line-height: 1; }\
+    .g2c-close:hover { background: #252530; color: #e8e8ec; }\
+    .g2c-body { padding: 18px 22px 14px; }\
+    .g2c-btn { width: 100%; padding: 14px 16px; border: 1px solid #333340; border-radius: 12px; background: #222228; color: #e8e8ec; font-size: 13px; font-weight: 600; cursor: pointer; text-align: left; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; transition: all 0.15s ease; position: relative; overflow: hidden; }\
+    .g2c-btn:hover { background: #2a2a32; border-color: #444450; transform: translateY(-1px); }\
     .g2c-btn:active { transform: translateY(0); }\
     .g2c-btn.running { pointer-events: none; border-color: #d4a574; }\
     .g2c-btn.done { border-color: #7eb8a0; }\
     .g2c-btn.error { border-color: #e07070; }\
-    .g2c-btn-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }\
+    .g2c-btn-icon { font-size: 20px; width: 28px; text-align: center; flex-shrink: 0; }\
     .g2c-btn-text { flex: 1; }\
-    .g2c-btn-sub { font-size: 11px; color: #666; font-weight: 400; margin-top: 2px; }\
-    .g2c-progress { margin-top: 6px; }\
-    .g2c-progress-bar { width: 100%; height: 4px; background: #1c1c20; border-radius: 2px; overflow: hidden; }\
-    .g2c-progress-fill { height: 100%; background: linear-gradient(90deg, #d4a574, #e8c49a); border-radius: 2px; transition: width 0.3s ease; width: 0%; }\
-    .g2c-progress-text { font-size: 11px; color: #8e8e96; margin-top: 4px; }\
-    .g2c-log { margin-top: 12px; max-height: 120px; overflow-y: auto; background: #0d0d0e; border: 1px solid #1c1c20; border-radius: 8px; padding: 8px 10px; font-family: 'SF Mono', 'Consolas', monospace; font-size: 11px; line-height: 1.5; color: #8e8e96; display: none; }\
+    .g2c-btn-sub { font-size: 11px; color: #777; font-weight: 400; margin-top: 3px; }\
+    .g2c-progress { margin-top: 10px; }\
+    .g2c-progress-bar { width: 100%; height: 5px; background: #252530; border-radius: 3px; overflow: hidden; }\
+    .g2c-progress-fill { height: 100%; background: linear-gradient(90deg, #d4a574, #e8c49a); border-radius: 3px; transition: width 0.3s ease; width: 0%; }\
+    .g2c-progress-text { font-size: 11px; color: #999; margin-top: 6px; }\
+    .g2c-log { margin-top: 14px; max-height: 140px; overflow-y: auto; background: #141418; border: 1px solid #252530; border-radius: 10px; padding: 10px 12px; font-family: 'SF Mono', 'Consolas', monospace; font-size: 11px; line-height: 1.6; color: #999; display: none; }\
     .g2c-log.visible { display: block; }\
     .g2c-log-entry { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\
     .g2c-log-entry.error { color: #e07070; }\
     .g2c-log-entry.success { color: #7eb8a0; }\
-    .g2c-footer { padding: 12px 20px; border-top: 1px solid #1c1c20; display: flex; justify-content: space-between; align-items: center; }\
-    .g2c-footer-text { font-size: 10px; color: #444; }\
+    .g2c-footer { padding: 14px 22px; border-top: 1px solid #252530; display: flex; justify-content: space-between; align-items: center; }\
+    .g2c-footer-text { font-size: 10px; color: #555; }\
     .g2c-footer-link { font-size: 10px; color: #d4a574; text-decoration: none; }\
     .g2c-footer-link:hover { text-decoration: underline; }\
-    .g2c-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #333; border-top-color: #d4a574; border-radius: 50%; animation: g2c-spin 0.6s linear infinite; }\
-    .g2c-toggle-log { background: none; border: none; color: #555; font-size: 11px; cursor: pointer; padding: 4px 0; margin-top: 8px; }\
-    .g2c-toggle-log:hover { color: #999; }\
+    .g2c-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #444; border-top-color: #d4a574; border-radius: 50%; animation: g2c-spin 0.6s linear infinite; }\
+    .g2c-toggle-log { background: none; border: none; color: #666; font-size: 11px; cursor: pointer; padding: 6px 0; margin-top: 10px; }\
+    .g2c-toggle-log:hover { color: #aaa; }\
     .g2c-drag-handle { cursor: move; }\
+    .g2c-divider { height: 1px; background: #2a2a35; margin: 6px 0 10px; }\
   ";
   document.head.appendChild(style);
 
@@ -92,7 +93,7 @@
           <div class="g2c-btn-sub">Custom instructions &amp; settings</div>\
         </div>\
       </button>\
-      <button class="g2c-btn" id="g2c-btn-all" style="border-color:#d4a574;background:#141416;">\
+      <button class="g2c-btn" id="g2c-btn-all" style="border-color:#d4a574;background:#222228;">\
         <div class="g2c-btn-icon">\uD83D\uDCE5</div>\
         <div class="g2c-btn-text">\
           <span style="color:#d4a574;">Export Everything</span>\
