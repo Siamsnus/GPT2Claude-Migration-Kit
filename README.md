@@ -32,7 +32,7 @@ No existing browser extension exports memory items or custom instructions. This 
 2. Press `F12` → click **Console** tab
 3. Paste this and press Enter:
 ```js
-var s=document.createElement('script');s.src='https://raw.githubusercontent.com/Siamsnus/GPT2Claude-Migration-Kit/main/migrate.js?v='+Date.now();document.head.appendChild(s);
+fetch('https://raw.githubusercontent.com/Siamsnus/GPT2Claude-Migration-Kit/main/migrate.js?v='+Date.now()).then(r=>r.text()).then(t=>{var b=new Blob([t],{type:'application/javascript'});var u=URL.createObjectURL(b);var s=document.createElement('script');s.src=u;document.head.appendChild(s)})
 ```
 
 ## Importing to Claude

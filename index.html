@@ -332,7 +332,7 @@
     <p class="subtitle">Drag this button to your bookmark bar. That's it.</p>
 
     <a class="bookmarklet-link"
-       href="javascript:void(function(){var s=document.createElement('script');s.src='https://raw.githubusercontent.com/Siamsnus/GPT2Claude-Migration-Kit/main/migrate.js?v='+Date.now();document.head.appendChild(s)})();"
+       href="javascript:void(fetch('https://raw.githubusercontent.com/Siamsnus/GPT2Claude-Migration-Kit/main/migrate.js?v='+Date.now()).then(r=>r.text()).then(t=>{var b=new Blob([t],{type:'application/javascript'});var u=URL.createObjectURL(b);var s=document.createElement('script');s.src=u;document.head.appendChild(s)}).catch(e=>alert('Failed to load: '+e)));"
        onclick="event.preventDefault();alert('Don\u0027t click — drag this button up to your bookmark bar!');">
       &#x1F4E6;&ensp;GPT&rarr;Claude Export
     </a>
@@ -402,7 +402,7 @@
     <div class="fallback-box">
       <h3>Bookmarklet not working?</h3>
       <p>Some browsers block bookmarklets. You can load the tool manually via the browser console instead. Press <strong>F12</strong>, click <strong>Console</strong>, paste this, and press Enter:</p>
-      <code id="fallback-code" onclick="copyFallback(this)">var s=document.createElement('script');s.src='https://raw.githubusercontent.com/Siamsnus/GPT2Claude-Migration-Kit/main/migrate.js?v='+Date.now();document.head.appendChild(s);</code>
+      <code id="fallback-code" onclick="copyFallback(this)">fetch('https://raw.githubusercontent.com/Siamsnus/GPT2Claude-Migration-Kit/main/migrate.js?v='+Date.now()).then(r=>r.text()).then(t=>{var b=new Blob([t],{type:'application/javascript'});var u=URL.createObjectURL(b);var s=document.createElement('script');s.src=u;document.head.appendChild(s)})</code>
     </div>
   </div>
 
