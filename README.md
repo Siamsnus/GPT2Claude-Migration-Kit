@@ -37,7 +37,7 @@ var s=document.createElement('script');s.src='https://raw.githubusercontent.com/
 
 ## Importing to Claude
 
-Upload the exported files to [claude.ai](https://claude.ai) in this order:
+Upload the exported files to [claude.ai](https://claude.ai) in this order. You can also use the **Claude desktop app** — click the **+** button at the bottom left, then **Add files or photos** (or press `Ctrl+U`).
 
 ### Step 1: Memories first
 Upload `chatgpt_memories.md` with this prompt:
@@ -78,15 +78,15 @@ Claude gets roughly **70% of what ChatGPT knew** from the import — all the fac
 ### Example conversations after import
 
 ```
-You:   "Do you remember that legal case I was working on?"
-Claude: "Yes — case T 7634-25 at Attunda tingsrätt. You were developing
-         jurisdiction arguments based on Hague Convention Article 5
-         regarding habitual residence. Want to pick up where we left off?"
+You:   "Do you remember that sourdough recipe we worked on?"
+Claude: "Yes — the one with 78% hydration and the overnight cold proof.
+         You said the crust was perfect but the crumb was too dense.
+         We were going to try autolyse next. Want to tweak it?"
 
-You:   "What was my main project at work?"
-Claude: "You were building a dashboard for the Q3 sales pipeline using
-         React and Supabase. Last time we discussed it you were stuck
-         on the authentication flow. Should we debug that?"
+You:   "What was that movie you recommended?"
+Claude: "You asked for sci-fi that doesn't treat the audience like idiots.
+         I suggested Arrival, Primer, and Coherence. You watched Primer
+         and said it melted your brain. Still haven't tried the other two."
 ```
 
 Claude has access to everything you imported. Ask it about any topic from your ChatGPT history and it can find it — either from stored memory or by searching your past conversations.
@@ -135,4 +135,4 @@ MIT — do whatever you want with it.
 
 ---
 
-**Built with [Claude](https://claude.ai) by [Siamsnus](https://github.com/Siamsnus)**
+**Built with [Claude](https://claude.ai) by [Siamsnus](https://www.siamsnus.com)**
