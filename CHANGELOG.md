@@ -17,6 +17,12 @@ All notable changes to the GPT→Claude Migration Kit.
 - **Old export banner** — detects exports without branch data and suggests re-exporting with latest tool
 - **First-branch highlight** — subtle pulse animation on first branched message when opening a conversation
 - **Export format v3** — migrate.js now preserves the full conversation tree including all regenerated responses
+- **Smart download filters** — scan first, then choose what to download:
+  - Filter by model (checkboxes with counts)
+  - Date range picker
+  - Max conversation limit
+  - **Incremental export** — load previous export to skip already-downloaded conversations
+  - Time estimate shown before download starts
 - **Per-alternative model badges** — carousel shows which model generated each alternative
 - **Version footer** — shows viewer version and export tool version for debugging
 - **Tab navigation** — sidebar switches between 💬 Chats, 🧠 Memories, ⚙️ Settings with badge counts

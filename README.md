@@ -145,15 +145,34 @@ Existing browser extensions can export conversations as formatted text, but none
 
 Your data. Your choice where it lives.
 
+## Features
+
+Everything runs in your browser — no data is sent anywhere.
+
+**Export:**
+- One-click export of all conversations, memories, and custom instructions
+- Smart download filters: filter by model, date range, count limit
+- Incremental export: load previous export to skip already-downloaded conversations
+- Time estimate before download
+- Project conversations included
+- Branch/regeneration data preserved
+- Image references captured as placeholders
+- Rate limit handling with auto-retry
+
+**Viewer:**
+- Tabbed interface: 💬 Chats · 🧠 Memories · ⚙️ Settings
+- Multi-file drag & drop with auto-detection
+- Search across all messages
+- Sort by date, name, or length
+- Filter by model
+- Per-message model badges
+- Branch/regeneration carousel with keyboard nav
+- Markdown rendering
+- Project badges
+- Works fully offline
+
 ## Planned features
 
-- **Smart download filters** — After scanning your conversation list, choose what to download before waiting hours:
-  - Filter by model (checkboxes: gpt-4o, gpt-5.2, etc. with counts)
-  - Filter by date range
-  - Limit by count ("download newest 200")
-  - Filter by project
-  - **Incremental export** — drag your previous export to skip already-downloaded conversations (compare by ID, only fetch new/updated ones)
-  - Resume interrupted downloads
 - **Image export** — Download images (uploaded photos, DALL-E generations) referenced in conversations. Currently the JSON contains image markers but not the actual files. PRs welcome.
 - **Import to other platforms** — Tested import prompts for Gemini, Copilot, etc.
 

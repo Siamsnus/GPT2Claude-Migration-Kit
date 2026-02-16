@@ -57,6 +57,25 @@
     .g2c-toggle-log:hover { color: #aaa; }\
     .g2c-drag-handle { cursor: move; }\
     .g2c-divider { height: 1px; background: #2a2a35; margin: 6px 0 10px; }\
+    .g2c-filter-panel { margin-top: 10px; }\
+    .g2c-filter-section { margin-bottom: 12px; }\
+    .g2c-filter-label { font-size: 10px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }\
+    .g2c-filter-models { max-height: 120px; overflow-y: auto; background: #141418; border: 1px solid #252530; border-radius: 8px; padding: 6px 8px; }\
+    .g2c-model-row { display: flex; align-items: center; padding: 3px 0; font-size: 12px; cursor: pointer; color: #ccc; }\
+    .g2c-model-row:hover { color: #fff; }\
+    .g2c-model-row input { margin-right: 8px; accent-color: #d4a574; }\
+    .g2c-model-row .cnt { color: #666; margin-left: auto; font-size: 10px; font-family: monospace; }\
+    .g2c-filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }\
+    .g2c-filter-input { flex: 1; padding: 6px 8px; background: #141418; border: 1px solid #252530; border-radius: 6px; color: #e8e8ec; font-size: 12px; font-family: monospace; outline: none; }\
+    .g2c-filter-input:focus { border-color: #d4a574; }\
+    .g2c-filter-input::placeholder { color: #555; }\
+    .g2c-filter-summary { font-size: 12px; color: #d4a574; padding: 8px 0; font-weight: 600; }\
+    .g2c-filter-drop { border: 1px dashed #333340; border-radius: 8px; padding: 10px; text-align: center; font-size: 11px; color: #666; cursor: pointer; transition: all 0.15s; }\
+    .g2c-filter-drop:hover { border-color: #d4a574; color: #999; }\
+    .g2c-filter-drop.active { border-color: #7eb8a0; color: #7eb8a0; }\
+    .g2c-select-btns { display: flex; gap: 6px; margin-top: 4px; }\
+    .g2c-select-btns button { background: none; border: none; color: #666; font-size: 10px; cursor: pointer; padding: 0; }\
+    .g2c-select-btns button:hover { color: #d4a574; }\
   ";
   document.head.appendChild(style);
 
@@ -256,17 +275,20 @@
   }
 
   // ========== EXPORT: CONVERSATIONS ==========
+  var scannedConvos = []; // all conversation metadata after scan
+  var previousExportIds = {}; // IDs from previous export for incremental mode
+
   async function exportConversations() {
     var btn = document.getElementById("g2c-btn-convos");
-    setButtonState(btn, "running", "Getting conversation list...");
+    setButtonState(btn, "running", "Scanning conversation list...");
 
     try {
       var token = await getToken();
       var headers = {"Authorization": "Bearer " + token};
-      var allConvos = [];
+      scannedConvos = [];
       var offset = 0;
 
-      log("Fetching conversation list...");
+      log("Scanning conversation list...");
 
       while (true) {
         var listResp = await fetch(
@@ -283,15 +305,16 @@
         log("Batch: " + items.length + " conversations (offset " + offset + ")");
 
         for (var j = 0; j < items.length; j++) {
-          allConvos.push(items[j]);
+          scannedConvos.push(items[j]);
         }
 
         offset += items.length;
+        setProgress(0, "Scanning... " + scannedConvos.length + " conversations found");
         if (items.length < 100) break;
         await new Promise(function(r) { setTimeout(r, 500); });
       }
 
-      log("Total conversations: " + allConvos.length);
+      log("Total conversations: " + scannedConvos.length);
 
       // Try to fetch project conversations too
       try {
@@ -322,14 +345,14 @@
                 for (var pj = 0; pj < projItems.length; pj++) {
                   projItems[pj]._project = projName;
                   projItems[pj]._project_id = projId;
-                  allConvos.push(projItems[pj]);
+                  scannedConvos.push(projItems[pj]);
                 }
                 projOffset += projItems.length;
                 if (projItems.length < 100) break;
                 await new Promise(function(r) { setTimeout(r, 500); });
               }
             }
-            log("Total with projects: " + allConvos.length);
+            log("Total with projects: " + scannedConvos.length);
           } else {
             log("No projects found");
           }
@@ -340,26 +363,237 @@
         log("Projects check failed: " + projErr.message + " (continuing without)");
       }
 
-      setButtonState(btn, "running", "Downloading 0/" + allConvos.length + "...");
+      // Show filter panel
+      setButtonState(btn, "done", scannedConvos.length + " conversations found");
+      showFilterPanel();
+
+    } catch (err) {
+      log("Scan failed: " + err.message, "error");
+      setButtonState(btn, "error", err.message);
+    }
+  }
+
+  function showFilterPanel() {
+    // Build model breakdown
+    var models = {};
+    var oldest = Infinity;
+    var newest = 0;
+    for (var i = 0; i < scannedConvos.length; i++) {
+      var c = scannedConvos[i];
+      var m = c.default_model_slug || "unknown";
+      models[m] = (models[m] || 0) + 1;
+      if (c.update_time && c.update_time < oldest) oldest = c.update_time;
+      if (c.update_time && c.update_time > newest) newest = c.update_time;
+    }
+    var modelKeys = Object.keys(models).sort(function(a, b) { return models[b] - models[a]; });
+
+    // Format dates for inputs
+    function tsToDate(ts) {
+      if (!ts || ts === Infinity) return "";
+      var d = new Date(ts > 1e12 ? ts : ts * 1000);
+      return d.toISOString().slice(0, 10);
+    }
+
+    var modelCheckboxes = "";
+    for (var i = 0; i < modelKeys.length; i++) {
+      var mk = modelKeys[i];
+      modelCheckboxes += '<label class="g2c-model-row"><input type="checkbox" checked data-model="' + mk + '"> ' + mk + '<span class="cnt">' + models[mk] + '</span></label>';
+    }
+
+    var filterHtml = '\
+      <div class="g2c-filter-panel" id="g2c-filter-panel">\
+        <div class="g2c-filter-section">\
+          <div class="g2c-filter-label">Models</div>\
+          <div class="g2c-filter-models" id="g2c-filter-models">' + modelCheckboxes + '</div>\
+          <div class="g2c-select-btns"><button onclick="g2cSelectAll(true)">Select all</button> · <button onclick="g2cSelectAll(false)">Select none</button></div>\
+        </div>\
+        <div class="g2c-filter-section">\
+          <div class="g2c-filter-label">Date range</div>\
+          <div class="g2c-filter-row">\
+            <input type="date" class="g2c-filter-input" id="g2c-date-from" value="' + tsToDate(oldest) + '">\
+            <span style="color:#555;">→</span>\
+            <input type="date" class="g2c-filter-input" id="g2c-date-to" value="' + tsToDate(newest) + '">\
+          </div>\
+        </div>\
+        <div class="g2c-filter-section">\
+          <div class="g2c-filter-label">Max conversations (0 = all)</div>\
+          <input type="number" class="g2c-filter-input" id="g2c-limit" value="0" min="0" style="width:100%;">\
+        </div>\
+        <div class="g2c-filter-section">\
+          <div class="g2c-filter-label">Incremental export (skip already exported)</div>\
+          <div class="g2c-filter-drop" id="g2c-prev-drop" onclick="document.getElementById(\'g2c-prev-file\').click()">Drop or click to load previous export</div>\
+          <input type="file" id="g2c-prev-file" accept=".json" style="display:none;">\
+        </div>\
+        <div class="g2c-filter-summary" id="g2c-filter-summary">' + scannedConvos.length + ' conversations selected</div>\
+        <button class="g2c-btn" id="g2c-btn-download" style="border-color:#d4a574;margin-bottom:0;">\
+          <div class="g2c-btn-icon">\uD83D\uDCE5</div>\
+          <div class="g2c-btn-text"><span style="color:#d4a574;">Download ' + scannedConvos.length + ' conversations</span>\
+            <div class="g2c-btn-sub">~' + estimateTime(scannedConvos.length) + '</div>\
+          </div>\
+        </button>\
+      </div>';
+
+    // Insert filter panel after buttons, before progress
+    var progressEl = document.getElementById("g2c-progress");
+    var filterDiv = document.createElement("div");
+    filterDiv.innerHTML = filterHtml;
+    progressEl.parentNode.insertBefore(filterDiv.firstChild, progressEl);
+
+    // Hide the main buttons
+    document.getElementById("g2c-btn-memory").style.display = "none";
+    document.getElementById("g2c-btn-convos").style.display = "none";
+    document.getElementById("g2c-btn-instructions").style.display = "none";
+    document.getElementById("g2c-btn-all").style.display = "none";
+
+    // Wire up filter change events
+    var filterInputs = document.querySelectorAll("#g2c-filter-models input, #g2c-date-from, #g2c-date-to, #g2c-limit");
+    for (var fi = 0; fi < filterInputs.length; fi++) {
+      filterInputs[fi].addEventListener("change", updateFilterSummary);
+    }
+
+    // Previous export file handler
+    document.getElementById("g2c-prev-file").addEventListener("change", function() {
+      if (this.files.length) loadPreviousExport(this.files[0]);
+    });
+    var dropEl = document.getElementById("g2c-prev-drop");
+    dropEl.addEventListener("dragover", function(e) { e.preventDefault(); this.style.borderColor = "#d4a574"; });
+    dropEl.addEventListener("dragleave", function() { this.style.borderColor = ""; });
+    dropEl.addEventListener("drop", function(e) {
+      e.preventDefault();
+      this.style.borderColor = "";
+      if (e.dataTransfer.files.length) loadPreviousExport(e.dataTransfer.files[0]);
+    });
+
+    // Download button
+    document.getElementById("g2c-btn-download").addEventListener("click", startFilteredDownload);
+  }
+
+  function estimateTime(count) {
+    // ~1.5 seconds per conversation (1s delay + fetch time)
+    var secs = count * 1.5;
+    if (secs < 60) return "~" + Math.round(secs) + " seconds";
+    var mins = Math.round(secs / 60);
+    if (mins < 60) return "~" + mins + " minutes";
+    var hrs = (secs / 3600).toFixed(1);
+    return "~" + hrs + " hours";
+  }
+
+  // Expose to onclick
+  window.g2cSelectAll = function(state) {
+    var boxes = document.querySelectorAll("#g2c-filter-models input");
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = state;
+    updateFilterSummary();
+  };
+
+  function getFilteredConvos() {
+    // Get selected models
+    var selectedModels = {};
+    var boxes = document.querySelectorAll("#g2c-filter-models input");
+    for (var i = 0; i < boxes.length; i++) {
+      if (boxes[i].checked) selectedModels[boxes[i].getAttribute("data-model")] = true;
+    }
+
+    // Date range
+    var fromStr = document.getElementById("g2c-date-from").value;
+    var toStr = document.getElementById("g2c-date-to").value;
+    var fromTs = fromStr ? new Date(fromStr + "T00:00:00").getTime() / 1000 : 0;
+    var toTs = toStr ? new Date(toStr + "T23:59:59").getTime() / 1000 : Infinity;
+
+    // Limit
+    var limit = parseInt(document.getElementById("g2c-limit").value) || 0;
+
+    var filtered = [];
+    for (var i = 0; i < scannedConvos.length; i++) {
+      var c = scannedConvos[i];
+      var model = c.default_model_slug || "unknown";
+      if (!selectedModels[model]) continue;
+
+      var ts = c.update_time || c.create_time || 0;
+      if (ts < fromTs || ts > toTs) continue;
+
+      // Skip if in previous export
+      if (previousExportIds[c.id]) continue;
+
+      filtered.push(c);
+      if (limit > 0 && filtered.length >= limit) break;
+    }
+    return filtered;
+  }
+
+  function updateFilterSummary() {
+    var filtered = getFilteredConvos();
+    var summary = document.getElementById("g2c-filter-summary");
+    var dlBtn = document.getElementById("g2c-btn-download");
+    var skipped = Object.keys(previousExportIds).length;
+    var text = filtered.length + " conversations selected";
+    if (skipped > 0) text += " (" + skipped + " skipped from previous export)";
+    summary.textContent = text;
+    dlBtn.querySelector(".g2c-btn-text span").textContent = "Download " + filtered.length + " conversations";
+    dlBtn.querySelector(".g2c-btn-sub").textContent = estimateTime(filtered.length);
+  }
+
+  function loadPreviousExport(file) {
+    var dropEl = document.getElementById("g2c-prev-drop");
+    dropEl.textContent = "Loading " + file.name + "...";
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var data = JSON.parse(e.target.result);
+        var convos = data.conversations || data || [];
+        if (Array.isArray(convos)) {
+          previousExportIds = {};
+          for (var i = 0; i < convos.length; i++) {
+            if (convos[i].id) previousExportIds[convos[i].id] = true;
+          }
+          dropEl.textContent = "\u2705 " + Object.keys(previousExportIds).length + " conversations from previous export";
+          dropEl.className = "g2c-filter-drop active";
+          log("Loaded previous export: " + Object.keys(previousExportIds).length + " conversation IDs");
+          updateFilterSummary();
+        }
+      } catch (err) {
+        dropEl.textContent = "\u274C Could not parse file";
+        log("Previous export error: " + err.message, "error");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function startFilteredDownload() {
+    var filtered = getFilteredConvos();
+    if (filtered.length === 0) {
+      alert("No conversations selected. Adjust your filters.");
+      return;
+    }
+
+    var btn = document.getElementById("g2c-btn-download");
+    setButtonState(btn, "running", "Downloading 0/" + filtered.length + "...");
+
+    // Disable filter inputs
+    var inputs = document.querySelectorAll("#g2c-filter-panel input, #g2c-filter-panel button:not(#g2c-btn-download)");
+    for (var fi = 0; fi < inputs.length; fi++) inputs[fi].disabled = true;
+
+    try {
+      var token = await getToken();
+      var headers = {"Authorization": "Bearer " + token};
 
       var fullExport = {
         export_date: new Date().toISOString(),
         tool: "GPT2Claude Migration Kit v2.1",
         format_version: 3,
-        total_conversations: allConvos.length,
+        total_conversations: filtered.length,
         conversations: []
       };
 
       var successCount = 0;
       var errorCount = 0;
 
-      for (var i = 0; i < allConvos.length; i++) {
-        var c = allConvos[i];
+      for (var i = 0; i < filtered.length; i++) {
+        var c = filtered[i];
         var title = c.title || "Untitled";
-        var pct = Math.round(((i + 1) / allConvos.length) * 100);
+        var pct = Math.round(((i + 1) / filtered.length) * 100);
 
-        setProgress(pct, (i + 1) + " / " + allConvos.length + " — " + title);
-        setButtonState(btn, "running", "Downloading " + (i + 1) + "/" + allConvos.length + "...");
+        setProgress(pct, (i + 1) + " / " + filtered.length + " \u2014 " + title);
+        setButtonState(btn, "running", "Downloading " + (i + 1) + "/" + filtered.length + "...");
 
         try {
           var convoResp = await fetch(
@@ -369,7 +603,7 @@
 
           if (convoResp.status === 429) {
             log("Rate limited, waiting 30s...", "error");
-            setButtonState(btn, "running", "Rate limited — waiting 30s...");
+            setButtonState(btn, "running", "Rate limited \u2014 waiting 30s...");
             await new Promise(function(r) { setTimeout(r, 30000); });
             i--;
             continue;
@@ -387,8 +621,6 @@
           var hasBranches = false;
 
           if (detail.mapping) {
-            // Walk the conversation tree properly to preserve branches
-            // Find root node (no parent)
             var mapKeys = Object.keys(detail.mapping);
             var rootId = null;
             for (var mk = 0; mk < mapKeys.length; mk++) {
@@ -399,7 +631,6 @@
             }
             if (!rootId) rootId = mapKeys[0];
 
-            // Helper: extract text from a message node
             function extractNodeText(node) {
               if (!node || !node.message || !node.message.content) return "";
               var parts = node.message.content.parts;
@@ -411,7 +642,7 @@
                 } else if (parts[p] && typeof parts[p] === "object") {
                   if (parts[p].content_type === "image_asset_pointer" || parts[p].asset_pointer) {
                     var imgName = (parts[p].metadata && parts[p].metadata.dalle && parts[p].metadata.dalle.prompt) ? "DALL-E: " + parts[p].metadata.dalle.prompt : "image";
-                    textParts.push("[🖼 " + imgName + "]");
+                    textParts.push("[\uD83D\uDDBC " + imgName + "]");
                   }
                 }
               }
@@ -430,7 +661,6 @@
               return (node.message && node.message.create_time) || null;
             }
 
-            // Walk tree: follow last child (= latest/current branch), collect alternatives
             var current = rootId;
             var visited = {};
             var safety = 0;
@@ -451,14 +681,13 @@
                     model: extractNodeModel(node)
                   };
 
-                  // Check parent for branch points — if parent has multiple children, this message has alternatives
                   if (node.parent && detail.mapping[node.parent]) {
                     var parentNode = detail.mapping[node.parent];
                     if (parentNode.children && parentNode.children.length > 1) {
                       var alts = [];
                       for (var ci = 0; ci < parentNode.children.length; ci++) {
                         var sibId = parentNode.children[ci];
-                        if (sibId === current) continue; // skip current (main) branch
+                        if (sibId === current) continue;
                         var sib = detail.mapping[sibId];
                         if (sib && sib.message && sib.message.content) {
                           var sibText = extractNodeText(sib);
@@ -483,7 +712,6 @@
                 }
               }
 
-              // Follow last child (latest/current branch)
               if (node.children && node.children.length > 0) {
                 current = node.children[node.children.length - 1];
               } else {
@@ -507,11 +735,11 @@
 
           successCount++;
           if (i % 25 === 0 && i > 0) {
-            log("Progress: " + (i + 1) + "/" + allConvos.length);
+            log("Progress: " + (i + 1) + "/" + filtered.length);
           }
 
         } catch (err) {
-          log("Error: " + title + " — " + err.message, "error");
+          log("Error: " + title + " \u2014 " + err.message, "error");
           errorCount++;
           fullExport.conversations.push({id: c.id, title: title, error: err.message});
         }
@@ -528,7 +756,7 @@
       log("DONE! " + successCount + " conversations, " + errorCount + " errors, ~" + sizeMB + " MB", "success");
 
     } catch (err) {
-      log("Conversation export failed: " + err.message, "error");
+      log("Download failed: " + err.message, "error");
       setButtonState(btn, "error", err.message);
     }
   }
@@ -599,9 +827,10 @@
     log("--- EXPORT ALL started ---");
     await exportMemories();
     await exportInstructions();
+    log("Memories & instructions done. Scanning conversations...");
     await exportConversations();
-    setButtonState(btn, "done", "All exports complete!");
-    log("--- EXPORT ALL finished ---", "success");
+    // exportConversations now shows filter panel — user clicks Download from there
+    log("Memories & instructions exported. Configure conversation filters and click Download.", "success");
   });
 
   document.getElementById("g2c-toggle-log").addEventListener("click", function() {
