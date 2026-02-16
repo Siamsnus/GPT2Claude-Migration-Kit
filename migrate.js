@@ -19,6 +19,14 @@
     @keyframes g2c-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }\
     @keyframes g2c-spin { to { transform: rotate(360deg); } }\
     @keyframes g2c-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }\
+    @keyframes g2c-indeterminate { 0% { left: -30%; width: 30%; } 50% { left: 50%; width: 30%; } 100% { left: 100%; width: 30%; } }\
+    .g2c-progress-fill.indeterminate { position: relative; width: 100% !important; background: none !important; overflow: hidden; }\
+    .g2c-progress-fill.indeterminate::after { content: ''; position: absolute; top: 0; left: -30%; width: 30%; height: 100%; background: linear-gradient(90deg, transparent, #d4a574, transparent); border-radius: 3px; animation: g2c-indeterminate 1.5s ease-in-out infinite; }\
+    .g2c-scan-live { margin-top: 10px; background: #141418; border: 1px solid #252530; border-radius: 8px; padding: 10px 12px; font-size: 11px; }\
+    .g2c-scan-live .g2c-scan-count { font-size: 20px; font-weight: 700; color: #d4a574; font-family: -apple-system, sans-serif; }\
+    .g2c-scan-live .g2c-scan-status { color: #888; margin-top: 4px; }\
+    .g2c-scan-models { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }\
+    .g2c-scan-tag { font-size: 10px; padding: 2px 8px; background: #222228; border: 1px solid #333340; border-radius: 10px; color: #a0a0e0; font-family: monospace; }\
     #gpt2claude-panel { position: fixed; top: 50%; right: 24px; transform: translateY(-50%); width: 360px; background: #1a1a1f; border: 1px solid #333340; border-radius: 16px; box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #e8e8ec; animation: g2c-fadein 0.3s ease-out; }\
     #gpt2claude-panel * { box-sizing: border-box; margin: 0; padding: 0; }\
     .g2c-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px 14px; border-bottom: 1px solid #2a2a35; background: #1e1e24; border-radius: 16px 16px 0 0; }\
@@ -102,7 +110,7 @@
         <div class="g2c-btn-icon">\uD83D\uDCAC</div>\
         <div class="g2c-btn-text">\
           Export All Conversations\
-          <div class="g2c-btn-sub">Every chat with full history</div>\
+          <div class="g2c-btn-sub">Scans first, then you choose what to download</div>\
         </div>\
       </button>\
       <button class="g2c-btn" id="g2c-btn-instructions">\
@@ -280,13 +288,30 @@
 
   async function exportConversations() {
     var btn = document.getElementById("g2c-btn-convos");
-    setButtonState(btn, "running", "Scanning conversation list...");
+    setButtonState(btn, "running", "Scanning...");
+
+    // Show indeterminate progress + live counter
+    var progressEl = document.getElementById("g2c-progress");
+    progressEl.style.display = "block";
+    var fillEl = document.getElementById("g2c-progress-fill");
+    fillEl.classList.add("indeterminate");
+    fillEl.style.width = "100%";
+
+    // Insert live scan display
+    var scanLive = document.createElement("div");
+    scanLive.className = "g2c-scan-live";
+    scanLive.id = "g2c-scan-live";
+    scanLive.innerHTML = '<div class="g2c-scan-count" id="g2c-scan-count">0</div>' +
+      '<div class="g2c-scan-status" id="g2c-scan-status">Scanning your conversations...</div>' +
+      '<div class="g2c-scan-models" id="g2c-scan-models"></div>';
+    progressEl.parentNode.insertBefore(scanLive, progressEl.nextSibling);
 
     try {
       var token = await getToken();
       var headers = {"Authorization": "Bearer " + token};
       scannedConvos = [];
       var offset = 0;
+      var liveModels = {};
 
       log("Scanning conversation list...");
 
@@ -306,10 +331,23 @@
 
         for (var j = 0; j < items.length; j++) {
           scannedConvos.push(items[j]);
+          var m = items[j].default_model_slug || "unknown";
+          liveModels[m] = (liveModels[m] || 0) + 1;
         }
 
+        // Update live display
+        document.getElementById("g2c-scan-count").textContent = scannedConvos.length;
+        document.getElementById("g2c-scan-status").textContent = items.length >= 100 ? "Still scanning..." : "Scan complete!";
+
+        // Update model tags
+        var tagsHtml = "";
+        var modelKeys = Object.keys(liveModels).sort(function(a, b) { return liveModels[b] - liveModels[a]; });
+        for (var mi = 0; mi < modelKeys.length; mi++) {
+          tagsHtml += '<span class="g2c-scan-tag">' + modelKeys[mi] + ' (' + liveModels[modelKeys[mi]] + ')</span>';
+        }
+        document.getElementById("g2c-scan-models").innerHTML = tagsHtml;
+
         offset += items.length;
-        setProgress(0, "Scanning... " + scannedConvos.length + " conversations found");
         if (items.length < 100) break;
         await new Promise(function(r) { setTimeout(r, 500); });
       }
@@ -319,6 +357,7 @@
       // Try to fetch project conversations too
       try {
         log("Checking for projects...");
+        document.getElementById("g2c-scan-status").textContent = "Checking projects...";
         var projResp = await fetch(
           "https://chatgpt.com/backend-api/projects?offset=0&limit=100",
           {credentials: "include", headers: headers}
@@ -347,6 +386,8 @@
                   projItems[pj]._project_id = projId;
                   scannedConvos.push(projItems[pj]);
                 }
+                document.getElementById("g2c-scan-count").textContent = scannedConvos.length;
+                document.getElementById("g2c-scan-status").textContent = "Scanning project: " + projName + "...";
                 projOffset += projItems.length;
                 if (projItems.length < 100) break;
                 await new Promise(function(r) { setTimeout(r, 500); });
@@ -365,6 +406,16 @@
 
       // Show filter panel
       setButtonState(btn, "done", scannedConvos.length + " conversations found");
+
+      // Clean up scan live display
+      var scanLiveEl = document.getElementById("g2c-scan-live");
+      if (scanLiveEl) scanLiveEl.parentNode.removeChild(scanLiveEl);
+      // Reset progress bar to determinate
+      var fillEl = document.getElementById("g2c-progress-fill");
+      fillEl.classList.remove("indeterminate");
+      fillEl.style.width = "0%";
+      document.getElementById("g2c-progress").style.display = "none";
+
       showFilterPanel();
 
     } catch (err) {
@@ -567,6 +618,10 @@
 
     var btn = document.getElementById("g2c-btn-download");
     setButtonState(btn, "running", "Downloading 0/" + filtered.length + "...");
+
+    // Show determinate progress bar
+    document.getElementById("g2c-progress").style.display = "block";
+    document.getElementById("g2c-progress-fill").classList.remove("indeterminate");
 
     // Disable filter inputs
     var inputs = document.querySelectorAll("#g2c-filter-panel input, #g2c-filter-panel button:not(#g2c-btn-download)");
