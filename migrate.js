@@ -456,7 +456,7 @@
         <div class="g2c-filter-section">\
           <div class="g2c-filter-label">Models</div>\
           <div class="g2c-filter-models" id="g2c-filter-models">' + modelCheckboxes + '</div>\
-          <div class="g2c-select-btns"><button onclick="g2cSelectAll(true)">Select all</button> · <button onclick="g2cSelectAll(false)">Select none</button></div>\
+          <div class="g2c-select-btns"><button id="g2c-sel-all">Select all</button> · <button id="g2c-sel-none">Select none</button></div>\
         </div>\
         <div class="g2c-filter-section">\
           <div class="g2c-filter-label">Date range</div>\
@@ -472,7 +472,7 @@
         </div>\
         <div class="g2c-filter-section">\
           <div class="g2c-filter-label">Incremental export (skip already exported)</div>\
-          <div class="g2c-filter-drop" id="g2c-prev-drop" onclick="document.getElementById(\'g2c-prev-file\').click()">Drop or click to load previous export</div>\
+          <div class="g2c-filter-drop" id="g2c-prev-drop">Drop or click to load previous export</div>\
           <input type="file" id="g2c-prev-file" accept=".json" style="display:none;">\
         </div>\
         <div class="g2c-filter-summary" id="g2c-filter-summary">' + scannedConvos.length + ' conversations selected</div>\
@@ -488,13 +488,30 @@
     var progressEl = document.getElementById("g2c-progress");
     var filterDiv = document.createElement("div");
     filterDiv.innerHTML = filterHtml;
-    progressEl.parentNode.insertBefore(filterDiv.firstChild, progressEl);
+    progressEl.parentNode.insertBefore(filterDiv.firstElementChild || filterDiv.firstChild, progressEl);
 
     // Hide the main buttons
     document.getElementById("g2c-btn-memory").style.display = "none";
     document.getElementById("g2c-btn-convos").style.display = "none";
     document.getElementById("g2c-btn-instructions").style.display = "none";
     document.getElementById("g2c-btn-all").style.display = "none";
+
+    // Wire up select all/none buttons
+    document.getElementById("g2c-sel-all").addEventListener("click", function() {
+      var boxes = document.querySelectorAll("#g2c-filter-models input");
+      for (var i = 0; i < boxes.length; i++) boxes[i].checked = true;
+      updateFilterSummary();
+    });
+    document.getElementById("g2c-sel-none").addEventListener("click", function() {
+      var boxes = document.querySelectorAll("#g2c-filter-models input");
+      for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
+      updateFilterSummary();
+    });
+
+    // Wire up drop zone click
+    document.getElementById("g2c-prev-drop").addEventListener("click", function() {
+      document.getElementById("g2c-prev-file").click();
+    });
 
     // Wire up filter change events
     var filterInputs = document.querySelectorAll("#g2c-filter-models input, #g2c-date-from, #g2c-date-to, #g2c-limit");
@@ -528,13 +545,6 @@
     var hrs = (secs / 3600).toFixed(1);
     return "~" + hrs + " hours";
   }
-
-  // Expose to onclick
-  window.g2cSelectAll = function(state) {
-    var boxes = document.querySelectorAll("#g2c-filter-models input");
-    for (var i = 0; i < boxes.length; i++) boxes[i].checked = state;
-    updateFilterSummary();
-  };
 
   function getFilteredConvos() {
     // Get selected models
