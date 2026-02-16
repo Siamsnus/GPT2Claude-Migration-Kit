@@ -117,6 +117,25 @@
   .add-more-btn { background: none; border: 1px dashed var(--border); border-radius: 6px; color: var(--text-faint); font-family: var(--sans); font-size: 0.75rem; padding: 6px 14px; cursor: pointer; transition: all 0.15s; }
   .add-more-btn:hover { color: var(--accent); border-color: var(--accent); }
 
+  /* ===== BRANCH CAROUSEL ===== */
+  .branch-nav { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; font-family: var(--mono); font-size: 0.68rem; color: var(--text-faint); vertical-align: middle; }
+  .branch-nav button { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); width: 22px; height: 22px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; display: inline-flex; align-items: center; justify-content: center; transition: all 0.12s; padding: 0; }
+  .branch-nav button:hover { border-color: var(--accent); color: var(--accent); }
+  .branch-indicator { color: var(--gpt); font-size: 0.68rem; }
+  .branch-alt .msg-bubble { border: 1px dashed var(--border); opacity: 0.95; }
+  .branch-badge { font-size: 0.68rem; color: var(--gpt); margin-left: 4px; }
+
+  /* ===== OLD EXPORT BANNER ===== */
+  .old-export-banner { padding: 10px 20px; background: rgba(212,165,116,0.08); border-bottom: 1px solid var(--border); font-size: 0.78rem; color: var(--accent); line-height: 1.5; }
+  .old-export-banner a { color: var(--accent); text-decoration: underline; }
+
+  /* ===== PULSE ANIMATION ===== */
+  @keyframes branch-pulse { 0%, 100% { box-shadow: none; } 50% { box-shadow: 0 0 0 3px rgba(152,152,212,0.25); } }
+  .branch-highlight { animation: branch-pulse 1.5s ease-in-out 2; border-radius: 14px; }
+
+  /* ===== VERSION FOOTER ===== */
+  .viewer-footer { padding: 6px 16px; border-top: 1px solid var(--border); font-size: 0.65rem; color: var(--text-faint); font-family: var(--mono); text-align: center; }
+
   /* ===== SEARCH RESULTS ===== */
   .search-results { padding: 16px 28px; overflow-y: auto; flex: 1; background: var(--chat-bg); }
   .search-results h3 { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 16px; font-weight: 600; }
@@ -192,6 +211,9 @@
 
     <!-- CONVERSATIONS TAB -->
     <div class="tab-panel active" id="panel-conversations">
+      <div class="old-export-banner" id="old-export-banner" style="display:none;">
+        🔀 Regenerated responses not available in this export. <a href="https://siamsnus.github.io/GPT2Claude-Migration-Kit" target="_blank">Re-export with the latest tool</a> to see them.
+      </div>
       <div class="sidebar-header">
         <div class="search-wrap">
           <input type="text" class="search-box" id="search-box" placeholder="Search all messages...">
@@ -237,6 +259,7 @@
       <button class="add-more-btn" onclick="document.getElementById('file-input-more').click()">+ Load more files</button>
       <input type="file" id="file-input-more" accept=".json,.md,.txt" multiple style="display:none">
     </div>
+    <div class="viewer-footer" id="viewer-footer">Viewer v2.1</div>
   </div>
 
   <!-- MAIN CONTENT (hidden until file loaded) -->
@@ -261,7 +284,8 @@ var instructionsData = null;
 var currentSort = "newest";
 var currentModelFilter = "";
 var searchTimeout = null;
-var loadedTypes = {}; // track what's been loaded
+var loadedTypes = {};
+var exportFormatVersion = 0; // 0 = unknown/old, 3 = with branches
 
 // ===== TAB SWITCHING =====
 function switchTab(tab) {
@@ -456,6 +480,10 @@ function processConversations(content) {
     return;
   }
 
+  // Detect format version
+  if (data.format_version) exportFormatVersion = data.format_version;
+  else if (data.tool && data.tool.indexOf("v2.1") !== -1) exportFormatVersion = 3;
+
   var raw = [];
   if (Array.isArray(data)) raw = data;
   else if (data.conversations && Array.isArray(data.conversations)) raw = data.conversations;
@@ -463,14 +491,31 @@ function processConversations(content) {
   else if (data.title) raw = [data];
   else { alert("Unrecognized conversation format."); return; }
 
+  // Check if this is a raw ChatGPT official export (has mapping = can extract branches directly)
+  var isRawExport = raw.length > 0 && raw[0].mapping;
+
   conversations = raw.map(function(c, idx) {
     var msgs;
+    var hasBranches = false;
+
     if (c.messages && Array.isArray(c.messages)) {
+      // Migration kit format: messages already flattened
       msgs = c.messages.map(function(m) {
-        return { role: m.role || "unknown", text: m.content || m.text || "", timestamp: m.timestamp || 0, model: m.model || "" };
+        var msg = { role: m.role || "unknown", text: m.content || m.text || "", timestamp: m.timestamp || 0, model: m.model || "" };
+        if (m.alternatives && m.alternatives.length > 0) {
+          msg.alternatives = m.alternatives.map(function(a) {
+            return { text: a.content || a.text || "", role: a.role || "assistant", timestamp: a.timestamp || 0, model: a.model || "" };
+          });
+          hasBranches = true;
+        }
+        return msg;
       });
+      if (c.has_branches) hasBranches = true;
     } else if (c.mapping) {
-      msgs = flattenMessages(c.mapping);
+      // Raw ChatGPT format: walk tree and extract branches
+      var result = flattenMessagesWithBranches(c.mapping);
+      msgs = result.messages;
+      hasBranches = result.hasBranches;
     } else {
       msgs = [];
     }
@@ -496,6 +541,7 @@ function processConversations(content) {
       model: c.model || c.default_model_slug || extractModel(c),
       models_used: getModelsUsed(msgs),
       project: c.project || null,
+      hasBranches: hasBranches,
       messageCount: c.message_count || msgs.length,
       messages: msgs
     };
@@ -503,9 +549,22 @@ function processConversations(content) {
 
   var withErrors = conversations.filter(function(c) { return c.messageCount === 0; }).length;
   var totalMsgs = conversations.reduce(function(sum, c) { return sum + c.messageCount; }, 0);
+  var branchedCount = conversations.filter(function(c) { return c.hasBranches; }).length;
   var statsText = conversations.length + " conversations · " + totalMsgs.toLocaleString() + " messages";
+  if (branchedCount > 0) statsText += " · " + branchedCount + " with regenerations";
   if (withErrors > 0) statsText += " · " + withErrors + " empty";
   document.getElementById("sidebar-stats").textContent = statsText;
+
+  // Show banner for old exports without branch data
+  if (exportFormatVersion < 3 && !isRawExport) {
+    var banner = document.getElementById("old-export-banner");
+    if (banner) banner.style.display = "block";
+  }
+
+  // Update version footer
+  if (data.tool) {
+    document.getElementById("viewer-footer").textContent = "Viewer v2.1 · Export: " + data.tool;
+  }
 
   renderConversationList();
   setupSearch();
@@ -729,10 +788,15 @@ function countMessages(mapping) {
 }
 
 function flattenMessages(mapping) {
-  // Walk the tree from root to build linear message list
+  var result = flattenMessagesWithBranches(mapping);
+  return result.messages;
+}
+
+function flattenMessagesWithBranches(mapping) {
   var messages = [];
+  var hasBranches = false;
   var keys = Object.keys(mapping);
-  if (!keys.length) return messages;
+  if (!keys.length) return {messages: messages, hasBranches: false};
 
   // Find root node (no parent)
   var rootId = null;
@@ -744,7 +808,21 @@ function flattenMessages(mapping) {
   }
   if (!rootId) rootId = keys[0];
 
-  // Walk the tree depth-first following first child
+  // Helper: extract text from node
+  function nodeText(node) {
+    if (!node || !node.message || !node.message.content || !node.message.content.parts) return "";
+    return node.message.content.parts.map(function(p) {
+      if (typeof p === "string") return p;
+      if (p && p.text) return p.text;
+      if (p && (p.content_type === "image_asset_pointer" || p.asset_pointer)) {
+        var imgName = (p.metadata && p.metadata.dalle && p.metadata.dalle.prompt) ? "DALL-E: " + p.metadata.dalle.prompt : "image";
+        return "[🖼 " + imgName + "]";
+      }
+      return "";
+    }).join("");
+  }
+
+  // Walk the tree depth-first following last child
   var visited = {};
   var current = rootId;
   var safety = 0;
@@ -755,33 +833,55 @@ function flattenMessages(mapping) {
 
     var node = mapping[current];
     if (node && node.message) {
-      var msg = node.message;
-      var text = "";
-      if (msg.content && msg.content.parts) {
-        text = msg.content.parts.map(function(p) {
-          if (typeof p === "string") return p;
-          if (p && p.text) return p.text;
-          return "";
-        }).join("");
-      }
+      var text = nodeText(node);
       if (text.trim()) {
-        messages.push({
-          role: msg.author ? msg.author.role : "unknown",
+        var msg = {
+          role: (node.message.author ? node.message.author.role : "unknown"),
           text: text,
-          timestamp: msg.create_time || 0,
-          model: (msg.metadata && msg.metadata.model_slug) || ""
-        });
+          timestamp: node.message.create_time || 0,
+          model: (node.message.metadata && node.message.metadata.model_slug) || ""
+        };
+
+        // Check parent for siblings (= alternatives / regenerations)
+        if (node.parent && mapping[node.parent]) {
+          var parentNode = mapping[node.parent];
+          if (parentNode.children && parentNode.children.length > 1) {
+            var alts = [];
+            for (var si = 0; si < parentNode.children.length; si++) {
+              var sibId = parentNode.children[si];
+              if (sibId === current) continue;
+              var sib = mapping[sibId];
+              if (sib && sib.message) {
+                var sibText = nodeText(sib);
+                if (sibText.trim()) {
+                  alts.push({
+                    text: sibText,
+                    role: (sib.message.author ? sib.message.author.role : "unknown"),
+                    timestamp: sib.message.create_time || 0,
+                    model: (sib.message.metadata && sib.message.metadata.model_slug) || ""
+                  });
+                }
+              }
+            }
+            if (alts.length > 0) {
+              msg.alternatives = alts;
+              hasBranches = true;
+            }
+          }
+        }
+
+        messages.push(msg);
       }
     }
 
-    // Follow first child
+    // Follow last child
     if (node && node.children && node.children.length > 0) {
-      current = node.children[node.children.length - 1]; // last child = latest branch
+      current = node.children[node.children.length - 1];
     } else {
       break;
     }
   }
-  return messages;
+  return {messages: messages, hasBranches: hasBranches};
 }
 
 // ===== RENDER CONVERSATION LIST =====
@@ -838,7 +938,7 @@ function renderConversationList(filter) {
       }
     }
     html += '<div class="convo-item" data-id="' + c.id + '" onclick="openConversation(\'' + c.id + '\')">' +
-      '<div class="title">' + escHtml(c.title) + '</div>' +
+      '<div class="title">' + escHtml(c.title) + (c.hasBranches ? '<span class="branch-badge" title="Has regenerated responses">🔀</span>' : '') + '</div>' +
       '<div class="meta"><span>' + date + '</span><span>' + c.messageCount + ' msgs</span><span class="model">' + escHtml(c.models_used.length > 0 ? c.models_used.join(", ") : c.model) + '</span></div>' +
       (c.project ? '<div class="meta" style="margin-top:2px;"><span style="color:var(--green);">📁 ' + escHtml(c.project) + '</span></div>' : '') +
       (preview ? '<div class="preview">' + escHtml(preview) + '</div>' : '') +
@@ -876,6 +976,7 @@ function openConversation(id) {
   // Messages
   var container = document.getElementById("chat-messages");
   var html = "";
+  var firstBranchIdx = -1;
 
   for (var i = 0; i < c.messages.length; i++) {
     var m = c.messages[i];
@@ -889,13 +990,46 @@ function openConversation(id) {
 
     var avatar = role === "user" ? "Y" : role === "assistant" ? "AI" : role === "system" ? "S" : "T";
     var time = formatDateTime(m.timestamp);
+    var hasAlts = m.alternatives && m.alternatives.length > 0;
+    var totalAlts = hasAlts ? m.alternatives.length + 1 : 0;
 
-    html += '<div class="message ' + roleClass + '">' +
+    if (hasAlts && firstBranchIdx === -1) firstBranchIdx = i;
+
+    var msgId = "msg-" + i;
+    html += '<div class="message ' + roleClass + (hasAlts && firstBranchIdx === i ? ' branch-highlight' : '') + '" id="' + msgId + '">' +
       '<div class="msg-avatar">' + avatar + '</div>' +
-      '<div><div class="msg-bubble">' + renderMarkdown(m.text) + '</div>' +
-      '<div class="msg-time">' + (time ? time : '') +
-      (m.model && m.role === "assistant" ? '<span class="msg-model">' + escHtml(m.model) + '</span>' : '') +
-      '</div></div></div>';
+      '<div style="flex:1;min-width:0;">';
+
+    if (hasAlts) {
+      // Render carousel container with all versions
+      html += '<div class="branch-carousel" data-msg="' + i + '" data-current="0" data-total="' + totalAlts + '">';
+      // Main (current) version
+      html += '<div class="branch-version branch-v-0" style="display:block;"><div class="msg-bubble">' + renderMarkdown(m.text) + '</div></div>';
+      // Alternatives
+      for (var ai = 0; ai < m.alternatives.length; ai++) {
+        var alt = m.alternatives[ai];
+        html += '<div class="branch-version branch-v-' + (ai + 1) + '" style="display:none;"><div class="msg-bubble branch-alt">' + renderMarkdown(alt.text) + '</div></div>';
+      }
+      html += '</div>';
+      // Time + model + carousel nav
+      html += '<div class="msg-time">' + (time ? time : '') +
+        '<span class="msg-model branch-model-0">' + escHtml(m.model || "") + '</span>';
+      for (var ai = 0; ai < m.alternatives.length; ai++) {
+        html += '<span class="msg-model branch-model-' + (ai+1) + '" style="display:none;">' + escHtml(m.alternatives[ai].model || "") + '</span>';
+      }
+      html += '<span class="branch-nav">' +
+        '<button onclick="branchPrev(' + i + ')" title="Previous version">◀</button>' +
+        '<span class="branch-indicator" id="branch-ind-' + i + '">1/' + totalAlts + '</span>' +
+        '<button onclick="branchNext(' + i + ')" title="Next version">▶</button>' +
+        '</span></div>';
+    } else {
+      html += '<div class="msg-bubble">' + renderMarkdown(m.text) + '</div>' +
+        '<div class="msg-time">' + (time ? time : '') +
+        (m.model && m.role === "assistant" ? '<span class="msg-model">' + escHtml(m.model) + '</span>' : '') +
+        '</div>';
+    }
+
+    html += '</div></div>';
   }
 
   container.innerHTML = html;
@@ -1038,6 +1172,64 @@ function setupModelFilter() {
 function toggleSidebar() {
   document.getElementById("sidebar").classList.toggle("hidden");
 }
+
+// ===== BRANCH CAROUSEL =====
+function branchNav(msgIdx, direction) {
+  var carousel = document.querySelector('.branch-carousel[data-msg="' + msgIdx + '"]');
+  if (!carousel) return;
+  var current = parseInt(carousel.getAttribute("data-current"));
+  var total = parseInt(carousel.getAttribute("data-total"));
+  var next = current + direction;
+  if (next < 0) next = total - 1;
+  if (next >= total) next = 0;
+
+  // Hide current, show next
+  var versions = carousel.querySelectorAll(".branch-version");
+  for (var i = 0; i < versions.length; i++) {
+    versions[i].style.display = i === next ? "block" : "none";
+  }
+  carousel.setAttribute("data-current", next);
+
+  // Update indicator
+  var ind = document.getElementById("branch-ind-" + msgIdx);
+  if (ind) ind.textContent = (next + 1) + "/" + total;
+
+  // Update model badge
+  var msgEl = carousel.closest(".message");
+  if (msgEl) {
+    var models = msgEl.querySelectorAll("[class^='msg-model branch-model-']");
+    for (var i = 0; i < models.length; i++) {
+      models[i].style.display = i === next ? "inline-block" : "none";
+    }
+  }
+}
+
+function branchPrev(msgIdx) { branchNav(msgIdx, -1); }
+function branchNext(msgIdx) { branchNav(msgIdx, 1); }
+
+// Keyboard navigation for branches
+document.addEventListener("keydown", function(e) {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    // Find all carousels in view
+    var carousels = document.querySelectorAll(".branch-carousel");
+    if (carousels.length === 0) return;
+    // Find the one most visible (closest to viewport center)
+    var viewCenter = window.innerHeight / 2;
+    var closest = null;
+    var closestDist = Infinity;
+    for (var i = 0; i < carousels.length; i++) {
+      var rect = carousels[i].getBoundingClientRect();
+      var dist = Math.abs(rect.top + rect.height / 2 - viewCenter);
+      if (dist < closestDist) { closestDist = dist; closest = carousels[i]; }
+    }
+    if (closest) {
+      var msgIdx = parseInt(closest.getAttribute("data-msg"));
+      branchNav(msgIdx, e.key === "ArrowLeft" ? -1 : 1);
+      e.preventDefault();
+    }
+  }
+});
 
 // ===== UTILS =====
 function escHtml(s) {

@@ -11,6 +11,14 @@ All notable changes to the GPT→Claude Migration Kit.
 - **Memories viewer tab** — drag chatgpt_memories.md into the viewer to browse and search all your memories
 - **Instructions viewer tab** — drag chatgpt_instructions.json to see your custom instructions and account settings
 - **Multi-file support** — drag multiple files at once or load them one at a time; auto-detects file type
+- **Branch/regeneration carousel** — messages with regenerated responses show ◀ 1/3 ▶ navigation to browse alternatives
+- **Branch detection** — conversations with regenerations show 🔀 icon in sidebar, stats show count
+- **Keyboard navigation** — left/right arrow keys cycle through regenerated responses
+- **Old export banner** — detects exports without branch data and suggests re-exporting with latest tool
+- **First-branch highlight** — subtle pulse animation on first branched message when opening a conversation
+- **Export format v3** — migrate.js now preserves the full conversation tree including all regenerated responses
+- **Per-alternative model badges** — carousel shows which model generated each alternative
+- **Version footer** — shows viewer version and export tool version for debugging
 - **Tab navigation** — sidebar switches between 💬 Chats, 🧠 Memories, ⚙️ Settings with badge counts
 - **"Load more files" button** — add files after initial load without reloading the page
 - **Project export** — conversations inside ChatGPT Projects are now included in the export, tagged with project name

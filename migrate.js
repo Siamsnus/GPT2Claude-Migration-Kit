@@ -1,4 +1,4 @@
-// GPT2Claude Migration Kit v2.0
+// GPT2Claude Migration Kit v2.1
 // https://github.com/Siamsnus/GPT2Claude-Migration-Kit
 // Exports ChatGPT memories, conversations, and instructions
 // No data leaves your browser - everything runs locally
@@ -67,7 +67,7 @@
     <div class="g2c-header g2c-drag-handle">\
       <div>\
         <div class="g2c-title"><span class="gpt">GPT</span><span class="arrow">\u2192</span><span class="claude">Claude</span></div>\
-        <div class="g2c-version">Migration Kit v2.0</div>\
+        <div class="g2c-version">Migration Kit v2.1</div>\
       </div>\
       <button class="g2c-close" id="g2c-close">\u00D7</button>\
     </div>\
@@ -231,7 +231,7 @@
       var memories = data.memories || data.results || data;
       var md = "# ChatGPT Memory Export\n";
       md += "# Exported: " + new Date().toISOString() + "\n";
-      md += "# Tool: GPT2Claude Migration Kit v2.0\n\n";
+      md += "# Tool: GPT2Claude Migration Kit v2.1\n\n";
 
       var count = 0;
       if (Array.isArray(memories)) {
@@ -344,7 +344,8 @@
 
       var fullExport = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.0",
+        tool: "GPT2Claude Migration Kit v2.1",
+        format_version: 3,
         total_conversations: allConvos.length,
         conversations: []
       };
@@ -383,56 +384,110 @@
 
           var detail = await convoResp.json();
           var messages = [];
+          var hasBranches = false;
 
           if (detail.mapping) {
-            var nodeKeys = Object.keys(detail.mapping);
-            var nodes = [];
-            for (var k = 0; k < nodeKeys.length; k++) {
-              nodes.push(detail.mapping[nodeKeys[k]]);
+            // Walk the conversation tree properly to preserve branches
+            // Find root node (no parent)
+            var mapKeys = Object.keys(detail.mapping);
+            var rootId = null;
+            for (var mk = 0; mk < mapKeys.length; mk++) {
+              if (!detail.mapping[mapKeys[mk]].parent) {
+                rootId = mapKeys[mk];
+                break;
+              }
             }
-            nodes.sort(function(a, b) {
-              var ta = (a.message && a.message.create_time) ? a.message.create_time : 0;
-              var tb = (b.message && b.message.create_time) ? b.message.create_time : 0;
-              return ta - tb;
-            });
+            if (!rootId) rootId = mapKeys[0];
 
-            for (var n = 0; n < nodes.length; n++) {
-              var node = nodes[n];
+            // Helper: extract text from a message node
+            function extractNodeText(node) {
+              if (!node || !node.message || !node.message.content) return "";
+              var parts = node.message.content.parts;
+              if (!Array.isArray(parts)) return JSON.stringify(node.message.content);
+              var textParts = [];
+              for (var p = 0; p < parts.length; p++) {
+                if (typeof parts[p] === "string") {
+                  textParts.push(parts[p]);
+                } else if (parts[p] && typeof parts[p] === "object") {
+                  if (parts[p].content_type === "image_asset_pointer" || parts[p].asset_pointer) {
+                    var imgName = (parts[p].metadata && parts[p].metadata.dalle && parts[p].metadata.dalle.prompt) ? "DALL-E: " + parts[p].metadata.dalle.prompt : "image";
+                    textParts.push("[🖼 " + imgName + "]");
+                  }
+                }
+              }
+              return textParts.join("\n");
+            }
+
+            function extractNodeRole(node) {
+              return (node.message && node.message.author && node.message.author.role) || "unknown";
+            }
+
+            function extractNodeModel(node) {
+              return (node.message && node.message.metadata && node.message.metadata.model_slug) || null;
+            }
+
+            function extractNodeTime(node) {
+              return (node.message && node.message.create_time) || null;
+            }
+
+            // Walk tree: follow last child (= latest/current branch), collect alternatives
+            var current = rootId;
+            var visited = {};
+            var safety = 0;
+            while (current && safety < 50000) {
+              safety++;
+              if (visited[current]) break;
+              visited[current] = true;
+              var node = detail.mapping[current];
+              if (!node) break;
+
               if (node.message && node.message.content) {
-                var parts = node.message.content.parts;
-                var text = "";
-                if (Array.isArray(parts)) {
-                  var textParts = [];
-                  for (var p = 0; p < parts.length; p++) {
-                    if (typeof parts[p] === "string") {
-                      textParts.push(parts[p]);
-                    } else if (parts[p] && typeof parts[p] === "object") {
-                      if (parts[p].content_type === "image_asset_pointer" || parts[p].asset_pointer) {
-                        var imgName = (parts[p].metadata && parts[p].metadata.dalle && parts[p].metadata.dalle.prompt) ? "DALL-E: " + parts[p].metadata.dalle.prompt : "image";
-                        textParts.push("[🖼 " + imgName + "]");
+                var text = extractNodeText(node);
+                if (text.trim() !== "") {
+                  var msgObj = {
+                    role: extractNodeRole(node),
+                    content: text,
+                    timestamp: extractNodeTime(node),
+                    model: extractNodeModel(node)
+                  };
+
+                  // Check parent for branch points — if parent has multiple children, this message has alternatives
+                  if (node.parent && detail.mapping[node.parent]) {
+                    var parentNode = detail.mapping[node.parent];
+                    if (parentNode.children && parentNode.children.length > 1) {
+                      var alts = [];
+                      for (var ci = 0; ci < parentNode.children.length; ci++) {
+                        var sibId = parentNode.children[ci];
+                        if (sibId === current) continue; // skip current (main) branch
+                        var sib = detail.mapping[sibId];
+                        if (sib && sib.message && sib.message.content) {
+                          var sibText = extractNodeText(sib);
+                          if (sibText.trim()) {
+                            alts.push({
+                              content: sibText,
+                              role: extractNodeRole(sib),
+                              timestamp: extractNodeTime(sib),
+                              model: extractNodeModel(sib)
+                            });
+                          }
+                        }
+                      }
+                      if (alts.length > 0) {
+                        msgObj.alternatives = alts;
+                        hasBranches = true;
                       }
                     }
                   }
-                  text = textParts.join("\n");
-                } else {
-                  text = JSON.stringify(node.message.content);
+
+                  messages.push(msgObj);
                 }
-                if (text.trim() !== "") {
-                  var role = "unknown";
-                  if (node.message.author && node.message.author.role) {
-                    role = node.message.author.role;
-                  }
-                  var model = null;
-                  if (node.message.metadata && node.message.metadata.model_slug) {
-                    model = node.message.metadata.model_slug;
-                  }
-                  messages.push({
-                    role: role,
-                    content: text,
-                    timestamp: node.message.create_time || null,
-                    model: model
-                  });
-                }
+              }
+
+              // Follow last child (latest/current branch)
+              if (node.children && node.children.length > 0) {
+                current = node.children[node.children.length - 1];
+              } else {
+                break;
               }
             }
           }
@@ -445,6 +500,7 @@
             model: detail.default_model_slug || null,
             project: c._project || null,
             project_id: c._project_id || null,
+            has_branches: hasBranches,
             message_count: messages.length,
             messages: messages
           });
@@ -493,7 +549,7 @@
 
       var result = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.0",
+        tool: "GPT2Claude Migration Kit v2.1",
         data: {}
       };
 

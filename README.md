@@ -28,6 +28,7 @@ Don't want to read raw JSON? Open **[viewer.html](https://siamsnus.github.io/GPT
 - Filter by model (GPT-4o, GPT-5.2, etc.)
 - Search across all messages instantly
 - Read conversations with rendered markdown and per-message model badges
+- Browse regenerated responses with ◀ 1/3 ▶ carousel (use arrow keys!)
 - Project conversations shown with project badge
 
 **🧠 Memories** — drag `chatgpt_memories.md`
@@ -147,7 +148,6 @@ Your data. Your choice where it lives.
 ## Planned features
 
 - **Image export** — Download images (uploaded photos, DALL-E generations) referenced in conversations. Currently the JSON contains image markers but not the actual files. PRs welcome.
-- **Branch/regeneration viewer** — Show alternative responses and regenerated replies in the viewer (data is already captured in the export)
 - **Import to other platforms** — Tested import prompts for Gemini, Copilot, etc.
 
 ## Contributing
