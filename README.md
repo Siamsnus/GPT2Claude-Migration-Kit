@@ -20,16 +20,23 @@ No existing browser extension exports memory items or custom instructions. This 
 
 ## Browse your export
 
-Don't want to read raw JSON? Open **[viewer.html](https://siamsnus.github.io/GPT2Claude-Migration-Kit/viewer.html)** in your browser. Drag your exported conversations file into it to:
+Don't want to read raw JSON? Open **[viewer.html](https://siamsnus.github.io/GPT2Claude-Migration-Kit/viewer.html)** in your browser. Drop any of your exported files into it:
 
+**💬 Conversations** — drag `chatgpt_all_conversations.json`
 - Browse all conversations by title and date
 - Sort by newest, oldest, alphabetical, or longest
 - Filter by model (GPT-4o, GPT-5.2, etc.)
 - Search across all messages instantly
-- Read conversations in a familiar chat format with rendered markdown
+- Read conversations with rendered markdown and per-message model badges
 - Project conversations shown with project badge
 
-Everything runs locally — no data is uploaded anywhere. For extra privacy, download `viewer.html` and open it offline — it works the same way, no internet needed.
+**🧠 Memories** — drag `chatgpt_memories.md`
+- Browse all memorized facts in a searchable list
+
+**⚙️ Settings** — drag `chatgpt_instructions.json`
+- View your custom instructions and account settings
+
+Drop multiple files at once or load them one at a time — the viewer auto-detects file type. Everything runs locally, no data uploaded. Download `viewer.html` and open it offline for extra privacy.
 
 ## How to use
 
@@ -141,7 +148,6 @@ Your data. Your choice where it lives.
 
 - **Image export** — Download images (uploaded photos, DALL-E generations) referenced in conversations. Currently the JSON contains image markers but not the actual files. PRs welcome.
 - **Branch/regeneration viewer** — Show alternative responses and regenerated replies in the viewer (data is already captured in the export)
-- **Memory viewer** — Browse and search exported memory items in the viewer
 - **Import to other platforms** — Tested import prompts for Gemini, Copilot, etc.
 
 ## Contributing

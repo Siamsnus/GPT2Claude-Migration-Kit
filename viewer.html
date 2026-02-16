@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChatGPT Export Viewer — Browse your conversations</title>
+<title>ChatGPT Export Viewer — Browse your conversations, memories &amp; settings</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -17,6 +17,17 @@
     --mono: 'IBM Plex Mono', monospace; --sans: 'DM Sans', system-ui, sans-serif;
     --sidebar-w: 340px;
   }
+
+  /* ===== TABS ===== */
+  .tab-bar { display: flex; border-bottom: 1px solid var(--border); background: var(--sidebar); }
+  .tab-btn { flex: 1; padding: 10px 6px; font-family: var(--sans); font-size: 0.78rem; font-weight: 600; color: var(--text-faint); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s; text-align: center; }
+  .tab-btn:hover { color: var(--text-dim); background: var(--surface); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn .tab-icon { font-size: 1rem; display: block; margin-bottom: 2px; }
+  .tab-btn .tab-badge { display: inline-block; font-size: 0.65rem; color: var(--text-faint); font-family: var(--mono); margin-left: 2px; }
+  .tab-btn.empty { opacity: 0.4; }
+  .tab-panel { display: none; flex-direction: column; flex: 1; min-height: 0; }
+  .tab-panel.active { display: flex; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; overflow: hidden; }
   body { background: var(--bg); color: var(--text); font-family: var(--sans); }
@@ -79,6 +90,33 @@
   .message.user .msg-time { text-align: right; }
   .msg-model { display: inline-block; font-size: 0.65rem; color: var(--gpt); background: var(--gpt-dim); padding: 1px 6px; border-radius: 4px; font-family: var(--mono); margin-left: 8px; vertical-align: middle; }
 
+  /* ===== MEMORY VIEW ===== */
+  .memory-list { flex: 1; overflow-y: auto; padding: 20px; }
+  .memory-item { padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; font-size: 0.88rem; line-height: 1.6; transition: border-color 0.15s; }
+  .memory-item:hover { border-color: var(--accent); }
+  .memory-item .memory-num { font-family: var(--mono); font-size: 0.72rem; color: var(--text-faint); margin-bottom: 4px; }
+  .memory-search { width: 100%; padding: 9px 12px 9px 34px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--sans); font-size: 0.85rem; outline: none; }
+  .memory-search:focus { border-color: var(--accent); }
+  .memory-stats { padding: 10px 20px; font-size: 0.75rem; color: var(--text-faint); border-bottom: 1px solid var(--border); font-family: var(--mono); }
+
+  /* ===== INSTRUCTIONS VIEW ===== */
+  .instr-view { flex: 1; overflow-y: auto; padding: 24px 28px; }
+  .instr-section { margin-bottom: 24px; }
+  .instr-section h3 { font-size: 0.82rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .instr-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .instr-card .label { font-size: 0.75rem; color: var(--text-faint); font-family: var(--mono); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .instr-card .value { font-size: 0.88rem; line-height: 1.6; white-space: pre-line; }
+  .instr-card .value.empty { color: var(--text-faint); font-style: italic; }
+  .instr-pair { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .instr-pair:last-child { border-bottom: none; }
+  .instr-pair .key { font-size: 0.78rem; color: var(--text-dim); font-family: var(--mono); }
+  .instr-pair .val { font-size: 0.82rem; color: var(--text); }
+
+  /* ===== ADD MORE FILES BUTTON ===== */
+  .add-more-bar { padding: 8px 16px; border-top: 1px solid var(--border); text-align: center; }
+  .add-more-btn { background: none; border: 1px dashed var(--border); border-radius: 6px; color: var(--text-faint); font-family: var(--sans); font-size: 0.75rem; padding: 6px 14px; cursor: pointer; transition: all 0.15s; }
+  .add-more-btn:hover { color: var(--accent); border-color: var(--accent); }
+
   /* ===== SEARCH RESULTS ===== */
   .search-results { padding: 16px 28px; overflow-y: auto; flex: 1; background: var(--chat-bg); }
   .search-results h3 { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 16px; font-weight: 600; }
@@ -111,10 +149,7 @@
   .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; margin-bottom: 12px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ===== MEMORY VIEWER ===== */
-  .memory-banner { padding: 10px 20px; background: var(--accent-dim); border-bottom: 1px solid var(--border); font-size: 0.8rem; color: var(--accent); cursor: pointer; transition: background 0.15s; }
-  .memory-banner:hover { background: rgba(212,165,116,0.18); }
-  .memory-item { padding: 10px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 0.85rem; line-height: 1.5; color: var(--text-dim); }
+  /* ===== MEMORY VIEWER (legacy) ===== */
 
   /* Sort controls */
   .sort-controls { padding: 8px 20px; display: flex; gap: 6px; border-bottom: 1px solid var(--border); }
@@ -131,36 +166,77 @@
     <div class="drop-zone-inner">
       <div class="icon">📂</div>
       <h1>ChatGPT Export Viewer</h1>
-      <p>Browse your exported conversations, search across all messages, and read them in a familiar chat format. Everything stays on your machine.</p>
-      <button class="file-btn" onclick="document.getElementById('file-input').click()">📎 Choose JSON file</button>
-      <input type="file" id="file-input" accept=".json" style="display:none">
-      <div class="or">or drag and drop your file here</div>
-      <p style="font-size:0.78rem; color:var(--text-faint);">Works with files exported by <a href="https://siamsnus.github.io/GPT2Claude-Migration-Kit" style="color:var(--accent);text-decoration:none;">GPT→Claude Migration Kit</a> or ChatGPT's official export.</p>
-      <p style="font-size:0.75rem; color:var(--text-faint); margin-top:8px;">🔒 Everything runs in your browser — no data is uploaded anywhere. For extra peace of mind, <a href="viewer.html" download style="color:var(--accent);text-decoration:none;">download this page</a> and open it offline.</p>
+      <p>Browse your exported conversations, memories, and settings. Everything stays on your machine.</p>
+      <button class="file-btn" onclick="document.getElementById('file-input').click()">📎 Choose files</button>
+      <input type="file" id="file-input" accept=".json,.md,.txt" multiple style="display:none">
+      <div class="or">or drag and drop your files here</div>
+      <p style="font-size:0.82rem; color:var(--text-faint); line-height:1.6; margin-top:8px;">Supports: <strong style="color:var(--text-dim);">conversations</strong> (.json) · <strong style="color:var(--text-dim);">memories</strong> (.md) · <strong style="color:var(--text-dim);">instructions</strong> (.json)<br>Drop multiple files at once or load them one at a time.</p>
+      <p style="font-size:0.78rem; color:var(--text-faint); margin-top:12px;">Works with files exported by <a href="https://siamsnus.github.io/GPT2Claude-Migration-Kit" style="color:var(--accent);text-decoration:none;">GPT→Claude Migration Kit</a> or ChatGPT's official export.</p>
+      <p style="font-size:0.75rem; color:var(--text-faint); margin-top:8px;">🔒 No data is uploaded anywhere. <a href="viewer.html" download style="color:var(--accent);text-decoration:none;">Download this page</a> to use offline.</p>
     </div>
   </div>
 
   <!-- SIDEBAR (hidden until file loaded) -->
   <div class="sidebar" id="sidebar" style="display:none;">
-    <div class="sidebar-header">
-      <h2>Conversations</h2>
-      <div class="search-wrap">
-        <input type="text" class="search-box" id="search-box" placeholder="Search all messages...">
+    <div class="tab-bar" id="tab-bar">
+      <button class="tab-btn active" data-tab="conversations" onclick="switchTab('conversations')">
+        <span class="tab-icon">💬</span>Chats<span class="tab-badge" id="tab-badge-convos"></span>
+      </button>
+      <button class="tab-btn empty" data-tab="memories" onclick="switchTab('memories')">
+        <span class="tab-icon">🧠</span>Memories<span class="tab-badge" id="tab-badge-mem"></span>
+      </button>
+      <button class="tab-btn empty" data-tab="instructions" onclick="switchTab('instructions')">
+        <span class="tab-icon">⚙️</span>Settings<span class="tab-badge" id="tab-badge-instr"></span>
+      </button>
+    </div>
+
+    <!-- CONVERSATIONS TAB -->
+    <div class="tab-panel active" id="panel-conversations">
+      <div class="sidebar-header">
+        <div class="search-wrap">
+          <input type="text" class="search-box" id="search-box" placeholder="Search all messages...">
+        </div>
+      </div>
+      <div class="sidebar-stats" id="sidebar-stats"></div>
+      <div class="sort-controls" id="sort-controls">
+        <button class="sort-btn active" data-sort="newest">Newest</button>
+        <button class="sort-btn" data-sort="oldest">Oldest</button>
+        <button class="sort-btn" data-sort="alpha">A→Z</button>
+        <button class="sort-btn" data-sort="longest">Longest</button>
+      </div>
+      <div class="filter-controls" id="filter-controls" style="padding:6px 20px 8px;border-bottom:1px solid var(--border);">
+        <select id="model-filter" style="width:100%;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:0.75rem;outline:none;cursor:pointer;">
+          <option value="">All models</option>
+        </select>
+      </div>
+      <div class="convo-list" id="convo-list"></div>
+    </div>
+
+    <!-- MEMORIES TAB -->
+    <div class="tab-panel" id="panel-memories">
+      <div class="sidebar-header">
+        <div class="search-wrap">
+          <input type="text" class="search-box" id="memory-search" placeholder="Search memories...">
+        </div>
+      </div>
+      <div class="memory-stats" id="memory-stats"></div>
+      <div class="memory-list" id="memory-list" style="padding:12px 16px;">
+        <div style="color:var(--text-faint);font-size:0.85rem;padding:20px;text-align:center;">Drop a <strong>chatgpt_memories.md</strong> file to view your memories.</div>
       </div>
     </div>
-    <div class="sidebar-stats" id="sidebar-stats"></div>
-    <div class="sort-controls" id="sort-controls">
-      <button class="sort-btn active" data-sort="newest">Newest</button>
-      <button class="sort-btn" data-sort="oldest">Oldest</button>
-      <button class="sort-btn" data-sort="alpha">A→Z</button>
-      <button class="sort-btn" data-sort="longest">Longest</button>
+
+    <!-- INSTRUCTIONS TAB -->
+    <div class="tab-panel" id="panel-instructions">
+      <div class="instr-view" id="instr-view">
+        <div style="color:var(--text-faint);font-size:0.85rem;padding:20px;text-align:center;">Drop a <strong>chatgpt_instructions.json</strong> file to view your settings.</div>
+      </div>
     </div>
-    <div class="filter-controls" id="filter-controls" style="padding:6px 20px 8px;border-bottom:1px solid var(--border);">
-      <select id="model-filter" style="width:100%;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:0.75rem;outline:none;cursor:pointer;">
-        <option value="">All models</option>
-      </select>
+
+    <!-- ADD MORE FILES -->
+    <div class="add-more-bar">
+      <button class="add-more-btn" onclick="document.getElementById('file-input-more').click()">+ Load more files</button>
+      <input type="file" id="file-input-more" accept=".json,.md,.txt" multiple style="display:none">
     </div>
-    <div class="convo-list" id="convo-list"></div>
   </div>
 
   <!-- MAIN CONTENT (hidden until file loaded) -->
@@ -173,14 +249,59 @@
     <div class="empty-chat" id="empty-chat">← Pick a conversation from the sidebar</div>
     <div class="chat-messages" id="chat-messages" style="display:none;"></div>
     <div class="search-results" id="search-results" style="display:none;"></div>
+    <div id="memory-main" style="display:none;flex-direction:column;flex:1;background:var(--chat-bg);overflow:hidden;"></div>
+    <div id="instr-main" style="display:none;flex-direction:column;flex:1;background:var(--chat-bg);overflow:hidden;"></div>
   </div>
 </div>
 
 <script>
 var conversations = [];
+var memories = [];
+var instructionsData = null;
 var currentSort = "newest";
 var currentModelFilter = "";
 var searchTimeout = null;
+var loadedTypes = {}; // track what's been loaded
+
+// ===== TAB SWITCHING =====
+function switchTab(tab) {
+  var btns = document.querySelectorAll(".tab-btn");
+  var panels = document.querySelectorAll(".tab-panel");
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle("active", btns[i].getAttribute("data-tab") === tab);
+  }
+  for (var i = 0; i < panels.length; i++) {
+    panels[i].classList.toggle("active", panels[i].id === "panel-" + tab);
+  }
+  // Show appropriate main content
+  if (tab === "memories") {
+    showMemoryMain();
+  } else if (tab === "instructions") {
+    showInstructionsMain();
+  } else {
+    // Restore conversations view
+    document.getElementById("chat-messages").style.display = "none";
+    document.getElementById("empty-chat").style.display = "flex";
+    document.getElementById("search-results").style.display = "none";
+    document.getElementById("memory-main").style.display = "none";
+    document.getElementById("instr-main").style.display = "none";
+  }
+}
+
+function updateTabBadges() {
+  document.getElementById("tab-badge-convos").textContent = conversations.length > 0 ? " (" + conversations.length + ")" : "";
+  document.getElementById("tab-badge-mem").textContent = memories.length > 0 ? " (" + memories.length + ")" : "";
+  document.getElementById("tab-badge-instr").textContent = instructionsData ? " ✓" : "";
+
+  // Remove 'empty' class from tabs that have data
+  var tabs = document.querySelectorAll(".tab-btn");
+  for (var i = 0; i < tabs.length; i++) {
+    var t = tabs[i].getAttribute("data-tab");
+    if (t === "conversations" && conversations.length > 0) tabs[i].classList.remove("empty");
+    if (t === "memories" && memories.length > 0) tabs[i].classList.remove("empty");
+    if (t === "instructions" && instructionsData) tabs[i].classList.remove("empty");
+  }
+}
 
 // ===== FILE LOADING =====
 var dropZone = document.getElementById("drop-zone");
@@ -196,24 +317,51 @@ dropZone.addEventListener("dragleave", function() {
 dropZone.addEventListener("drop", function(e) {
   e.preventDefault();
   dropZone.classList.remove("dragover");
-  if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+  if (e.dataTransfer.files.length) loadFiles(e.dataTransfer.files);
 });
 fileInput.addEventListener("change", function() {
-  if (fileInput.files.length) loadFile(fileInput.files[0]);
+  if (fileInput.files.length) loadFiles(fileInput.files);
 });
 
+// "Load more files" button inside sidebar
+document.getElementById("file-input-more").addEventListener("change", function() {
+  if (this.files.length) loadFiles(this.files);
+  this.value = "";
+});
+
+// Also support drag-and-drop on the sidebar for additional files
+document.addEventListener("DOMContentLoaded", function() {
+  var sidebar = document.getElementById("sidebar");
+  sidebar.addEventListener("dragover", function(e) { e.preventDefault(); });
+  sidebar.addEventListener("drop", function(e) {
+    e.preventDefault();
+    if (e.dataTransfer.files.length) loadFiles(e.dataTransfer.files);
+  });
+});
+
+function loadFiles(fileList) {
+  for (var i = 0; i < fileList.length; i++) {
+    loadFile(fileList[i]);
+  }
+}
+
 function loadFile(file) {
-  if (!file.name.endsWith(".json")) {
-    alert("Please select a JSON file.");
+  var ext = file.name.split(".").pop().toLowerCase();
+  if (ext !== "json" && ext !== "md" && ext !== "txt") {
+    alert("Unsupported file type: ." + ext + "\nPlease use .json, .md, or .txt files.");
     return;
   }
-  var sizeMB = (file.size / 1024 / 1024).toFixed(1);
-  dropZone.innerHTML = '<div class="loading"><div class="spinner"></div>' +
-    '<div style="margin-top:12px;font-size:0.95rem;font-weight:600;">Loading ' + escHtml(file.name) + '</div>' +
-    '<div style="font-size:0.78rem;color:var(--text-faint);margin-top:4px;">' + sizeMB + ' MB</div>' +
-    '<div style="width:280px;margin:16px auto 0;"><div style="width:100%;height:6px;background:var(--surface);border-radius:3px;overflow:hidden;">' +
-    '<div id="load-progress" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#e8c49a);border-radius:3px;transition:width 0.2s;"></div></div>' +
-    '<div id="load-status" style="font-size:0.75rem;color:var(--text-dim);margin-top:8px;font-family:var(--mono);">Reading file...</div></div></div>';
+
+  // Show loading state
+  if (dropZone.style.display !== "none") {
+    var sizeMB = (file.size / 1024 / 1024).toFixed(1);
+    dropZone.innerHTML = '<div class="loading"><div class="spinner"></div>' +
+      '<div style="margin-top:12px;font-size:0.95rem;font-weight:600;">Loading ' + escHtml(file.name) + '</div>' +
+      '<div style="font-size:0.78rem;color:var(--text-faint);margin-top:4px;">' + sizeMB + ' MB</div>' +
+      '<div style="width:280px;margin:16px auto 0;"><div style="width:100%;height:6px;background:var(--surface);border-radius:3px;overflow:hidden;">' +
+      '<div id="load-progress" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#e8c49a);border-radius:3px;transition:width 0.2s;"></div></div>' +
+      '<div id="load-status" style="font-size:0.75rem;color:var(--text-dim);margin-top:8px;font-family:var(--mono);">Reading file...</div></div></div>';
+  }
 
   var reader = new FileReader();
   reader.onprogress = function(e) {
@@ -229,65 +377,104 @@ function loadFile(file) {
     var bar = document.getElementById("load-progress");
     var status = document.getElementById("load-status");
     if (bar) bar.style.width = "100%";
-    if (status) status.textContent = "Parsing JSON... (this may take a moment)";
-    // Use setTimeout to let the UI update before blocking JSON.parse
+    if (status) status.textContent = "Processing...";
     setTimeout(function() {
-      try {
-        var data = JSON.parse(e.target.result);
-        processData(data);
-      } catch (err) {
-        alert("Error parsing JSON: " + err.message);
-        location.reload();
-      }
+      processFile(file.name, e.target.result);
     }, 50);
   };
   reader.readAsText(file);
 }
 
-function processData(data) {
-  // Handle both migration kit format and official ChatGPT export
-  var raw = [];
-  if (Array.isArray(data)) {
-    // Official export: array of conversations
-    raw = data;
-  } else if (data.conversations && Array.isArray(data.conversations)) {
-    // Migration kit: {conversations: [...]}
-    raw = data.conversations;
-  } else if (data.data && Array.isArray(data.data)) {
-    raw = data.data;
-  } else {
-    // Maybe it's a single conversation
-    if (data.title) {
-      raw = [data];
-    } else {
-      alert("Unrecognized format. Expected a conversations JSON file.");
-      location.reload();
-      return;
+function detectFileType(filename, content) {
+  var ext = filename.split(".").pop().toLowerCase();
+
+  // Markdown = memories
+  if (ext === "md" || ext === "txt") {
+    if (content.indexOf("# ChatGPT Memory Export") !== -1 || content.indexOf("Memory Export") !== -1 || filename.toLowerCase().indexOf("memor") !== -1) {
+      return "memories";
     }
+    // Could still be a memories file without header
+    if (ext === "md") return "memories";
+    return "memories"; // .txt fallback
   }
 
-  // Parse and normalize — handle both pre-flattened (migration kit) and raw (mapping) formats
+  // JSON — detect which kind
+  try {
+    var data = JSON.parse(content);
+
+    // Instructions: has data.custom_instructions or data.settings
+    if (data.data && (data.data.custom_instructions || data.data.settings)) return "instructions";
+
+    // Conversations: array or object with conversations
+    if (Array.isArray(data) && data.length > 0 && (data[0].mapping || data[0].title)) return "conversations";
+    if (data.conversations && Array.isArray(data.conversations)) return "conversations";
+    if (data.data && Array.isArray(data.data) && data.data.length > 0) return "conversations";
+    if (data.title && (data.mapping || data.messages)) return "conversations";
+
+    // Instructions fallback: has tool/export_date but small
+    if (data.data && Object.keys(data.data).length > 0 && !data.conversations) return "instructions";
+
+    // Default to conversations for arrays
+    if (Array.isArray(data)) return "conversations";
+
+    return "conversations";
+  } catch (e) {
+    // Not valid JSON — treat as memories text
+    return "memories";
+  }
+}
+
+function processFile(filename, content) {
+  var type = detectFileType(filename, content);
+
+  if (type === "memories") {
+    processMemories(content);
+    showUI("memories");
+  } else if (type === "instructions") {
+    processInstructions(content);
+    showUI("instructions");
+  } else {
+    processConversations(content);
+    showUI("conversations");
+  }
+}
+
+function showUI(activeTab) {
+  dropZone.style.display = "none";
+  document.getElementById("sidebar").style.display = "flex";
+  document.getElementById("main-area").style.display = "flex";
+  updateTabBadges();
+  switchTab(activeTab);
+}
+
+// ===== PROCESS CONVERSATIONS =====
+function processConversations(content) {
+  try {
+    var data = JSON.parse(content);
+  } catch (e) {
+    alert("Error parsing JSON: " + e.message);
+    return;
+  }
+
+  var raw = [];
+  if (Array.isArray(data)) raw = data;
+  else if (data.conversations && Array.isArray(data.conversations)) raw = data.conversations;
+  else if (data.data && Array.isArray(data.data)) raw = data.data;
+  else if (data.title) raw = [data];
+  else { alert("Unrecognized conversation format."); return; }
+
   conversations = raw.map(function(c, idx) {
     var msgs;
-
     if (c.messages && Array.isArray(c.messages)) {
-      // Migration kit format: messages already flattened with {role, content, timestamp, model}
       msgs = c.messages.map(function(m) {
-        return {
-          role: m.role || "unknown",
-          text: m.content || m.text || "",
-          timestamp: m.timestamp || 0,
-          model: m.model || ""
-        };
+        return { role: m.role || "unknown", text: m.content || m.text || "", timestamp: m.timestamp || 0, model: m.model || "" };
       });
     } else if (c.mapping) {
-      // Raw ChatGPT format: tree structure needs flattening
       msgs = flattenMessages(c.mapping);
     } else {
       msgs = [];
     }
 
-    // Get timestamps - fall back to first/last message times if needed
     var createTime = Number(c.create_time) || 0;
     var updateTime = Number(c.update_time) || 0;
     if (!createTime && msgs.length > 0) {
@@ -305,9 +492,7 @@ function processData(data) {
     return {
       id: c.id || c.conversation_id || Math.random().toString(36).substr(2),
       title: c.title || "Untitled",
-      create_time: createTime,
-      update_time: updateTime,
-      _index: idx,
+      create_time: createTime, update_time: updateTime, _index: idx,
       model: c.model || c.default_model_slug || extractModel(c),
       models_used: getModelsUsed(msgs),
       project: c.project || null,
@@ -316,15 +501,7 @@ function processData(data) {
     };
   });
 
-  // Filter out conversations with errors and no messages
   var withErrors = conversations.filter(function(c) { return c.messageCount === 0; }).length;
-
-  // Show UI
-  dropZone.style.display = "none";
-  document.getElementById("sidebar").style.display = "flex";
-  document.getElementById("main-area").style.display = "flex";
-
-  // Stats
   var totalMsgs = conversations.reduce(function(sum, c) { return sum + c.messageCount; }, 0);
   var statsText = conversations.length + " conversations · " + totalMsgs.toLocaleString() + " messages";
   if (withErrors > 0) statsText += " · " + withErrors + " empty";
@@ -334,6 +511,196 @@ function processData(data) {
   setupSearch();
   setupSort();
   setupModelFilter();
+  loadedTypes.conversations = true;
+}
+
+// ===== PROCESS MEMORIES =====
+function processMemories(content) {
+  memories = [];
+  var lines = content.split("\n");
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    // Skip headers and empty lines
+    if (!line || line.charAt(0) === "#") continue;
+    // Strip leading number (e.g. "1. " or "42. ")
+    var cleaned = line.replace(/^\d+\.\s*/, "");
+    if (cleaned.length > 0) {
+      memories.push(cleaned);
+    }
+  }
+
+  document.getElementById("memory-stats").textContent = memories.length + " memories";
+  renderMemoryList();
+  setupMemorySearch();
+  loadedTypes.memories = true;
+}
+
+function renderMemoryList(filter) {
+  var list = document.getElementById("memory-list");
+  var html = "";
+  var f = filter ? filter.toLowerCase() : "";
+  var shown = 0;
+
+  for (var i = 0; i < memories.length; i++) {
+    if (f && memories[i].toLowerCase().indexOf(f) === -1) continue;
+    shown++;
+    var text = escHtml(memories[i]);
+    if (f) {
+      // Highlight matches
+      var re = new RegExp("(" + escRegExp(escHtml(filter)) + ")", "gi");
+      text = text.replace(re, '<mark style="background:var(--accent-dim);color:var(--accent);border-radius:2px;padding:0 2px;">$1</mark>');
+    }
+    html += '<div class="memory-item"><div class="memory-num">#' + (i + 1) + '</div>' + text + '</div>';
+  }
+
+  if (!html) html = '<div style="color:var(--text-faint);font-size:0.85rem;padding:20px;text-align:center;">No memories found' + (f ? ' matching "' + escHtml(filter) + '"' : '') + '.</div>';
+  if (f) document.getElementById("memory-stats").textContent = shown + " / " + memories.length + " memories";
+  else document.getElementById("memory-stats").textContent = memories.length + " memories";
+  list.innerHTML = html;
+}
+
+function setupMemorySearch() {
+  var box = document.getElementById("memory-search");
+  box.addEventListener("input", function() {
+    clearTimeout(searchTimeout);
+    var q = box.value.trim();
+    searchTimeout = setTimeout(function() { renderMemoryList(q); }, 200);
+  });
+}
+
+function escRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function showMemoryMain() {
+  document.getElementById("chat-messages").style.display = "none";
+  document.getElementById("empty-chat").style.display = "none";
+  document.getElementById("search-results").style.display = "none";
+  document.getElementById("instr-main").style.display = "none";
+  var mm = document.getElementById("memory-main");
+  mm.style.display = "flex";
+  if (memories.length === 0) {
+    mm.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:0.9rem;">Load a memories file (.md) to browse them here.</div>';
+  } else {
+    mm.innerHTML = '<div style="padding:28px;overflow-y:auto;flex:1;">' +
+      '<h2 style="font-size:1.1rem;font-weight:700;margin-bottom:6px;">🧠 Your ChatGPT Memories</h2>' +
+      '<p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:20px;">' + memories.length + ' facts ChatGPT memorized about you. Search and filter in the sidebar.</p>' +
+      '<div style="display:grid;gap:10px;">' + memories.map(function(m, i) {
+        return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:0.88rem;line-height:1.6;">' +
+          '<span style="font-family:var(--mono);font-size:0.7rem;color:var(--text-faint);">#' + (i+1) + '</span> ' + escHtml(m) + '</div>';
+      }).join("") + '</div></div>';
+  }
+}
+
+// ===== PROCESS INSTRUCTIONS =====
+function processInstructions(content) {
+  try {
+    instructionsData = JSON.parse(content);
+  } catch (e) {
+    alert("Error parsing instructions JSON: " + e.message);
+    return;
+  }
+  renderInstructionsSidebar();
+  loadedTypes.instructions = true;
+}
+
+function renderInstructionsSidebar() {
+  var view = document.getElementById("instr-view");
+  var d = instructionsData.data || instructionsData;
+  var html = '';
+
+  // Custom instructions
+  if (d.custom_instructions) {
+    var ci = d.custom_instructions;
+    html += '<div class="instr-section"><h3>Custom Instructions</h3><div class="instr-card">';
+
+    if (ci.about_user_message || ci.about_model_message) {
+      if (ci.about_user_message) {
+        html += '<div class="label">What would you like ChatGPT to know about you?</div>';
+        html += '<div class="value">' + escHtml(ci.about_user_message) + '</div>';
+      }
+      if (ci.about_model_message) {
+        html += '<div style="margin-top:14px;"><div class="label">How would you like ChatGPT to respond?</div>';
+        html += '<div class="value">' + escHtml(ci.about_model_message) + '</div></div>';
+      }
+    } else if (Array.isArray(ci)) {
+      for (var i = 0; i < ci.length; i++) {
+        var item = ci[i];
+        if (item.value) html += '<div class="value">' + escHtml(item.value) + '</div>';
+        else html += '<div class="value">' + escHtml(JSON.stringify(item, null, 2)) + '</div>';
+      }
+    } else {
+      html += '<div class="value">' + escHtml(JSON.stringify(ci, null, 2)) + '</div>';
+    }
+    html += '</div></div>';
+  }
+
+  // Settings
+  if (d.settings) {
+    html += '<div class="instr-section"><h3>Account Settings</h3><div class="instr-card">';
+    var settings = d.settings;
+    var keys = Object.keys(settings);
+    for (var i = 0; i < keys.length; i++) {
+      var val = settings[keys[i]];
+      var display = typeof val === "object" ? JSON.stringify(val) : String(val);
+      html += '<div class="instr-pair"><span class="key">' + escHtml(keys[i]) + '</span><span class="val">' + escHtml(display) + '</span></div>';
+    }
+    html += '</div></div>';
+  }
+
+  // Anything else in the data
+  var otherKeys = Object.keys(d).filter(function(k) { return k !== "custom_instructions" && k !== "settings"; });
+  if (otherKeys.length > 0) {
+    html += '<div class="instr-section"><h3>Other Data</h3><div class="instr-card">';
+    for (var i = 0; i < otherKeys.length; i++) {
+      var val = d[otherKeys[i]];
+      var display = typeof val === "object" ? JSON.stringify(val, null, 2) : String(val);
+      html += '<div class="instr-pair"><span class="key">' + escHtml(otherKeys[i]) + '</span><span class="val" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">' + escHtml(display) + '</span></div>';
+    }
+    html += '</div></div>';
+  }
+
+  // Export metadata
+  if (instructionsData.export_date) {
+    html += '<div class="instr-section" style="margin-top:20px;"><div style="font-size:0.72rem;color:var(--text-faint);font-family:var(--mono);">Exported: ' + escHtml(instructionsData.export_date) + '</div></div>';
+  }
+
+  if (!html) html = '<div style="color:var(--text-faint);padding:20px;text-align:center;">No settings data found.</div>';
+  view.innerHTML = html;
+}
+
+function showInstructionsMain() {
+  document.getElementById("chat-messages").style.display = "none";
+  document.getElementById("empty-chat").style.display = "none";
+  document.getElementById("search-results").style.display = "none";
+  document.getElementById("memory-main").style.display = "none";
+  var im = document.getElementById("instr-main");
+  im.style.display = "flex";
+  if (!instructionsData) {
+    im.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:0.9rem;">Load an instructions file (.json) to browse your settings here.</div>';
+    return;
+  }
+  var d = instructionsData.data || instructionsData;
+  var html = '<div style="padding:28px;overflow-y:auto;flex:1;">';
+  html += '<h2 style="font-size:1.1rem;font-weight:700;margin-bottom:6px;">⚙️ Your ChatGPT Settings</h2>';
+  html += '<p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:24px;">Custom instructions and account settings. Also shown in the sidebar.</p>';
+
+  // Custom instructions — big cards
+  if (d.custom_instructions) {
+    var ci = d.custom_instructions;
+    if (ci.about_user_message) {
+      html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">';
+      html += '<div style="font-size:0.75rem;color:var(--accent);font-family:var(--mono);margin-bottom:8px;text-transform:uppercase;">About You</div>';
+      html += '<div style="font-size:0.9rem;line-height:1.7;white-space:pre-line;">' + escHtml(ci.about_user_message) + '</div></div>';
+    }
+    if (ci.about_model_message) {
+      html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">';
+      html += '<div style="font-size:0.75rem;color:var(--accent);font-family:var(--mono);margin-bottom:8px;text-transform:uppercase;">Response Style</div>';
+      html += '<div style="font-size:0.9rem;line-height:1.7;white-space:pre-line;">' + escHtml(ci.about_model_message) + '</div></div>';
+    }
+  }
+  html += '</div>';
+  im.innerHTML = html;
 }
 
 function extractModel(c) {
@@ -535,6 +902,8 @@ function openConversation(id) {
   container.style.display = "block";
   document.getElementById("empty-chat").style.display = "none";
   document.getElementById("search-results").style.display = "none";
+  document.getElementById("memory-main").style.display = "none";
+  document.getElementById("instr-main").style.display = "none";
   container.scrollTop = 0;
 
   // Mobile: hide sidebar
@@ -553,6 +922,8 @@ function setupSearch() {
       renderConversationList();
       document.getElementById("search-results").style.display = "none";
       document.getElementById("chat-messages").style.display = "none";
+      document.getElementById("memory-main").style.display = "none";
+      document.getElementById("instr-main").style.display = "none";
       document.getElementById("empty-chat").style.display = "flex";
       return;
     }
@@ -616,6 +987,8 @@ function runSearch(query) {
   container.style.display = "block";
   document.getElementById("chat-messages").style.display = "none";
   document.getElementById("empty-chat").style.display = "none";
+  document.getElementById("memory-main").style.display = "none";
+  document.getElementById("instr-main").style.display = "none";
 
   // Also filter sidebar
   renderConversationList(query);

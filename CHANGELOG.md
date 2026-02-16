@@ -8,6 +8,11 @@ All notable changes to the GPT→Claude Migration Kit.
 - **Conversation Viewer** (`viewer.html`) — browse, search, and read exported conversations in a chat-like interface. Works offline.
 - **Model filter** — dropdown in viewer to filter conversations by actual models used in messages (not just conversation-level tag)
 - **Per-message model badge** — each AI response shows which model generated it (e.g. gpt-4o, gpt-5.2)
+- **Memories viewer tab** — drag chatgpt_memories.md into the viewer to browse and search all your memories
+- **Instructions viewer tab** — drag chatgpt_instructions.json to see your custom instructions and account settings
+- **Multi-file support** — drag multiple files at once or load them one at a time; auto-detects file type
+- **Tab navigation** — sidebar switches between 💬 Chats, 🧠 Memories, ⚙️ Settings with badge counts
+- **"Load more files" button** — add files after initial load without reloading the page
 - **Project export** — conversations inside ChatGPT Projects are now included in the export, tagged with project name
 - **Markdown rendering** — viewer renders bold, headers, code blocks, lists, and links instead of showing raw markdown
 - **Image placeholders** — image references in conversations show an inline SVG placeholder with description instead of a blank gap
