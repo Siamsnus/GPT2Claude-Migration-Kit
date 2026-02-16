@@ -6,7 +6,8 @@ All notable changes to the GPT→Claude Migration Kit.
 
 ### Added
 - **Conversation Viewer** (`viewer.html`) — browse, search, and read exported conversations in a chat-like interface. Works offline.
-- **Model filter** — dropdown in viewer to filter conversations by model (GPT-4o, GPT-5.2, etc.) with conversation counts
+- **Model filter** — dropdown in viewer to filter conversations by actual models used in messages (not just conversation-level tag)
+- **Per-message model badge** — each AI response shows which model generated it (e.g. gpt-4o, gpt-5.2)
 - **Project export** — conversations inside ChatGPT Projects are now included in the export, tagged with project name
 - **Markdown rendering** — viewer renders bold, headers, code blocks, lists, and links instead of showing raw markdown
 - **Image placeholders** — image references in conversations show an inline SVG placeholder with description instead of a blank gap

@@ -77,6 +77,7 @@
   .message.tool .msg-bubble { background: var(--surface); border: 1px solid var(--border); font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); }
   .msg-time { font-size: 0.68rem; color: var(--text-faint); margin-top: 4px; font-family: var(--mono); }
   .message.user .msg-time { text-align: right; }
+  .msg-model { display: inline-block; font-size: 0.65rem; color: var(--gpt); background: var(--gpt-dim); padding: 1px 6px; border-radius: 4px; font-family: var(--mono); margin-left: 8px; vertical-align: middle; }
 
   /* ===== SEARCH RESULTS ===== */
   .search-results { padding: 16px 28px; overflow-y: auto; flex: 1; background: var(--chat-bg); }
@@ -308,6 +309,7 @@ function processData(data) {
       update_time: updateTime,
       _index: idx,
       model: c.model || c.default_model_slug || extractModel(c),
+      models_used: getModelsUsed(msgs),
       project: c.project || null,
       messageCount: c.message_count || msgs.length,
       messages: msgs
@@ -432,9 +434,13 @@ function renderConversationList(filter) {
   else if (currentSort === "alpha") sorted.sort(function(a,b) { return a.title.localeCompare(b.title); });
   else if (currentSort === "longest") sorted.sort(function(a,b) { return b.messageCount - a.messageCount; });
 
-  // Filter by model
+  // Filter by model (checks actual message-level models)
   if (currentModelFilter) {
-    sorted = sorted.filter(function(c) { return c.model === currentModelFilter; });
+    sorted = sorted.filter(function(c) {
+      if (c.models_used.indexOf(currentModelFilter) !== -1) return true;
+      if (c.models_used.length === 0 && c.model === currentModelFilter) return true;
+      return false;
+    });
   }
 
   // Filter by text
@@ -466,7 +472,7 @@ function renderConversationList(filter) {
     }
     html += '<div class="convo-item" data-id="' + c.id + '" onclick="openConversation(\'' + c.id + '\')">' +
       '<div class="title">' + escHtml(c.title) + '</div>' +
-      '<div class="meta"><span>' + date + '</span><span>' + c.messageCount + ' msgs</span><span class="model">' + escHtml(c.model) + '</span></div>' +
+      '<div class="meta"><span>' + date + '</span><span>' + c.messageCount + ' msgs</span><span class="model">' + escHtml(c.models_used.length > 0 ? c.models_used.join(", ") : c.model) + '</span></div>' +
       (c.project ? '<div class="meta" style="margin-top:2px;"><span style="color:var(--green);">📁 ' + escHtml(c.project) + '</span></div>' : '') +
       (preview ? '<div class="preview">' + escHtml(preview) + '</div>' : '') +
       '</div>';
@@ -520,8 +526,9 @@ function openConversation(id) {
     html += '<div class="message ' + roleClass + '">' +
       '<div class="msg-avatar">' + avatar + '</div>' +
       '<div><div class="msg-bubble">' + renderMarkdown(m.text) + '</div>' +
-      (time ? '<div class="msg-time">' + time + '</div>' : '') +
-      '</div></div>';
+      '<div class="msg-time">' + (time ? time : '') +
+      (m.model && m.role === "assistant" ? '<span class="msg-model">' + escHtml(m.model) + '</span>' : '') +
+      '</div></div></div>';
   }
 
   container.innerHTML = html;
@@ -631,8 +638,13 @@ function setupSort() {
 function setupModelFilter() {
   var models = {};
   for (var i = 0; i < conversations.length; i++) {
+    var used = conversations[i].models_used;
+    for (var j = 0; j < used.length; j++) {
+      if (used[j]) models[used[j]] = (models[used[j]] || 0) + 1;
+    }
+    // Also count conversation-level model as fallback
     var m = conversations[i].model;
-    if (m && m !== "unknown") models[m] = (models[m] || 0) + 1;
+    if (m && m !== "unknown" && used.length === 0) models[m] = (models[m] || 0) + 1;
   }
   var select = document.getElementById("model-filter");
   var sortedModels = Object.keys(models).sort();
@@ -724,6 +736,16 @@ function formatDateLong(ts) {
   var d = new Date(ms);
   if (isNaN(d.getTime())) return "";
   return d.toLocaleDateString("en-US", {weekday:"short", month:"short", day:"numeric", year:"numeric"});
+}
+
+function getModelsUsed(msgs) {
+  var models = {};
+  for (var i = 0; i < msgs.length; i++) {
+    if (msgs[i].model && msgs[i].role === "assistant") {
+      models[msgs[i].model] = true;
+    }
+  }
+  return Object.keys(models);
 }
 </script>
 </body>
