@@ -1,4 +1,4 @@
-// GPT2Claude Migration Kit v2.1
+// GPT2Claude Migration Kit v2.2
 // https://github.com/Siamsnus/GPT2Claude-Migration-Kit
 // Exports ChatGPT memories, conversations, and instructions
 // No data leaves your browser - everything runs locally
@@ -20,13 +20,40 @@
     @keyframes g2c-spin { to { transform: rotate(360deg); } }\
     @keyframes g2c-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }\
     @keyframes g2c-indeterminate { 0% { left: -30%; width: 30%; } 50% { left: 50%; width: 30%; } 100% { left: 100%; width: 30%; } }\
+    @keyframes g2c-pulse-count { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }\
+    @keyframes g2c-dot-bounce { 0%,80%,100% { transform: translateY(0); } 40% { transform: translateY(-4px); } }\
     .g2c-progress-fill.indeterminate { position: relative; width: 100% !important; background: none !important; overflow: hidden; }\
     .g2c-progress-fill.indeterminate::after { content: ''; position: absolute; top: 0; left: -30%; width: 30%; height: 100%; background: linear-gradient(90deg, transparent, #d4a574, transparent); border-radius: 3px; animation: g2c-indeterminate 1.5s ease-in-out infinite; }\
-    .g2c-scan-live { margin-top: 10px; background: #141418; border: 1px solid #252530; border-radius: 8px; padding: 10px 12px; font-size: 11px; }\
-    .g2c-scan-live .g2c-scan-count { font-size: 20px; font-weight: 700; color: #d4a574; font-family: -apple-system, sans-serif; }\
-    .g2c-scan-live .g2c-scan-status { color: #888; margin-top: 4px; }\
-    .g2c-scan-models { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }\
-    .g2c-scan-tag { font-size: 10px; padding: 2px 8px; background: #222228; border: 1px solid #333340; border-radius: 10px; color: #a0a0e0; font-family: monospace; }\
+    .g2c-scan-hero { text-align: center; padding: 20px 0 10px; }\
+    .g2c-scan-hero .g2c-scan-count { font-size: 42px; font-weight: 800; color: #d4a574; font-variant-numeric: tabular-nums; animation: g2c-pulse-count 2s ease-in-out infinite; line-height: 1; }\
+    .g2c-scan-hero .g2c-scan-label { font-size: 12px; color: #888; margin-top: 4px; }\
+    .g2c-scan-hero .g2c-scan-status { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 12px; font-size: 12px; color: #999; }\
+    .g2c-scan-dots { display: flex; gap: 3px; }\
+    .g2c-scan-dots span { width: 4px; height: 4px; background: #d4a574; border-radius: 50%; animation: g2c-dot-bounce 1.2s ease-in-out infinite; }\
+    .g2c-scan-dots span:nth-child(2) { animation-delay: 0.15s; }\
+    .g2c-scan-dots span:nth-child(3) { animation-delay: 0.3s; }\
+    .g2c-scan-models { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid #2a2a35; }\
+    .g2c-scan-tag { font-size: 10px; padding: 3px 10px; background: #1e1e26; border: 1px solid #2a2a35; border-radius: 20px; color: #a0a0e0; font-family: 'SF Mono', Consolas, monospace; }\
+    .g2c-scan-reassure { font-size: 11px; color: #555; text-align: center; margin-top: 12px; }\
+    .g2c-dl-hero { text-align: center; padding: 16px 0 8px; }\
+    .g2c-dl-hero .g2c-dl-count { font-size: 28px; font-weight: 700; color: #7eb8a0; }\
+    .g2c-dl-hero .g2c-dl-of { font-size: 14px; color: #555; }\
+    .g2c-dl-hero .g2c-dl-title { font-size: 11px; color: #888; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px; }\
+    .g2c-dl-pct { font-size: 11px; color: #d4a574; font-family: 'SF Mono', Consolas, monospace; text-align: right; margin-top: 6px; }\
+    .g2c-dl-remaining { font-size: 11px; color: #666; text-align: center; margin-top: 8px; }\
+    .g2c-complete { text-align: center; padding: 20px 0 10px; }\
+    .g2c-complete-icon { font-size: 36px; margin-bottom: 6px; }\
+    .g2c-complete-title { font-size: 18px; font-weight: 700; color: #7eb8a0; }\
+    .g2c-complete-sub { font-size: 12px; color: #888; margin-top: 6px; }\
+    .g2c-whatsnext { margin: 16px 0; padding: 14px; background: #141418; border: 1px solid #252530; border-radius: 10px; }\
+    .g2c-whatsnext-title { font-size: 11px; color: #888; margin-bottom: 10px; font-weight: 600; }\
+    .g2c-whatsnext-item { font-size: 12px; color: #ccc; line-height: 1.8; margin-bottom: 10px; }\
+    .g2c-whatsnext-item:last-child { margin-bottom: 0; }\
+    .g2c-whatsnext-item a { color: #d4a574; text-decoration: none; }\
+    .g2c-whatsnext-item a:hover { text-decoration: underline; }\
+    .g2c-whatsnext-badge { font-size: 10px; color: #7eb8a0; background: rgba(126,184,160,0.12); padding: 1px 6px; border-radius: 4px; }\
+    .g2c-copy-log { background: none; border: none; color: #666; font-size: 11px; cursor: pointer; padding: 6px 0; margin-top: 10px; margin-left: 12px; }\
+    .g2c-copy-log:hover { color: #aaa; }\
     #gpt2claude-panel { position: fixed; top: 50%; right: 24px; transform: translateY(-50%); width: 360px; background: #1a1a1f; border: 1px solid #333340; border-radius: 16px; box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #e8e8ec; animation: g2c-fadein 0.3s ease-out; }\
     #gpt2claude-panel * { box-sizing: border-box; margin: 0; padding: 0; }\
     .g2c-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px 14px; border-bottom: 1px solid #2a2a35; background: #1e1e24; border-radius: 16px 16px 0 0; }\
@@ -94,7 +121,7 @@
     <div class="g2c-header g2c-drag-handle">\
       <div>\
         <div class="g2c-title"><span class="gpt">GPT</span><span class="arrow">\u2192</span><span class="claude">Claude</span></div>\
-        <div class="g2c-version">Migration Kit v2.1</div>\
+        <div class="g2c-version">Migration Kit v2.2</div>\
       </div>\
       <button class="g2c-close" id="g2c-close">\u00D7</button>\
     </div>\
@@ -132,6 +159,7 @@
         <div class="g2c-progress-text" id="g2c-progress-text"></div>\
       </div>\
       <button class="g2c-toggle-log" id="g2c-toggle-log">Show log \u25BC</button>\
+      <button class="g2c-copy-log" id="g2c-copy-log">Copy log</button>\
       <div class="g2c-log" id="g2c-log"></div>\
     </div>\
     <div class="g2c-footer">\
@@ -218,6 +246,17 @@
     log("Downloaded: " + filename, "success");
   }
 
+  // Safe event listener helper — guards against null elements in ChatGPT's SPA
+  function safeAddEvent(id, event, handler) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.addEventListener(event, handler);
+    } else {
+      log("Warning: element #" + id + " not found", "error");
+    }
+    return el;
+  }
+
   var cachedToken = null;
 
   async function getToken() {
@@ -258,7 +297,7 @@
       var memories = data.memories || data.results || data;
       var md = "# ChatGPT Memory Export\n";
       md += "# Exported: " + new Date().toISOString() + "\n";
-      md += "# Tool: GPT2Claude Migration Kit v2.1\n\n";
+      md += "# Tool: GPT2Claude Migration Kit v2.2\n\n";
 
       var count = 0;
       if (Array.isArray(memories)) {
@@ -283,28 +322,33 @@
   }
 
   // ========== EXPORT: CONVERSATIONS ==========
-  var scannedConvos = []; // all conversation metadata after scan
-  var previousExportIds = {}; // IDs from previous export for incremental mode
+  var scannedConvos = [];
+  var previousExportIds = {};
 
   async function exportConversations() {
     var btn = document.getElementById("g2c-btn-convos");
     setButtonState(btn, "running", "Scanning...");
 
-    // Show indeterminate progress + live counter
+    // Show indeterminate progress
     var progressEl = document.getElementById("g2c-progress");
     progressEl.style.display = "block";
     var fillEl = document.getElementById("g2c-progress-fill");
     fillEl.classList.add("indeterminate");
     fillEl.style.width = "100%";
 
-    // Insert live scan display
-    var scanLive = document.createElement("div");
-    scanLive.className = "g2c-scan-live";
-    scanLive.id = "g2c-scan-live";
-    scanLive.innerHTML = '<div class="g2c-scan-count" id="g2c-scan-count">0</div>' +
-      '<div class="g2c-scan-status" id="g2c-scan-status">Scanning your conversations...</div>' +
-      '<div class="g2c-scan-models" id="g2c-scan-models"></div>';
-    progressEl.parentNode.insertBefore(scanLive, progressEl.nextSibling);
+    // Insert scan hero display (State 2)
+    var scanHero = document.createElement("div");
+    scanHero.className = "g2c-scan-hero";
+    scanHero.id = "g2c-scan-hero";
+    scanHero.innerHTML = '<div class="g2c-scan-count" id="g2c-scan-count">0</div>' +
+      '<div class="g2c-scan-label">conversations found</div>' +
+      '<div class="g2c-scan-status" id="g2c-scan-status">' +
+        '<span class="g2c-scan-dots"><span></span><span></span><span></span></span>' +
+        ' Scanning your conversations\u2026' +
+      '</div>' +
+      '<div class="g2c-scan-models" id="g2c-scan-models"></div>' +
+      '<div class="g2c-scan-reassure">Filter options appear when scan completes</div>';
+    progressEl.parentNode.insertBefore(scanHero, progressEl.nextSibling);
 
     try {
       var token = await getToken();
@@ -335,9 +379,15 @@
           liveModels[m] = (liveModels[m] || 0) + 1;
         }
 
-        // Update live display
-        document.getElementById("g2c-scan-count").textContent = scannedConvos.length;
-        document.getElementById("g2c-scan-status").textContent = items.length >= 100 ? "Still scanning..." : "Scan complete!";
+        // Update scan hero display
+        var countEl = document.getElementById("g2c-scan-count");
+        var statusEl = document.getElementById("g2c-scan-status");
+        if (countEl) countEl.textContent = scannedConvos.length.toLocaleString();
+        if (statusEl) {
+          statusEl.innerHTML = items.length >= 100
+            ? '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Still scanning \u2014 this takes a minute, all good'
+            : 'Scan complete!';
+        }
 
         // Update model tags
         var tagsHtml = "";
@@ -345,7 +395,8 @@
         for (var mi = 0; mi < modelKeys.length; mi++) {
           tagsHtml += '<span class="g2c-scan-tag">' + modelKeys[mi] + ' (' + liveModels[modelKeys[mi]] + ')</span>';
         }
-        document.getElementById("g2c-scan-models").innerHTML = tagsHtml;
+        var modelsEl = document.getElementById("g2c-scan-models");
+        if (modelsEl) modelsEl.innerHTML = tagsHtml;
 
         offset += items.length;
         if (items.length < 100) break;
@@ -357,7 +408,8 @@
       // Try to fetch project conversations too
       try {
         log("Checking for projects...");
-        document.getElementById("g2c-scan-status").textContent = "Checking projects...";
+        var statusEl = document.getElementById("g2c-scan-status");
+        if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Checking projects\u2026';
         var projResp = await fetch(
           "https://chatgpt.com/backend-api/projects?offset=0&limit=100",
           {credentials: "include", headers: headers}
@@ -386,8 +438,10 @@
                   projItems[pj]._project_id = projId;
                   scannedConvos.push(projItems[pj]);
                 }
-                document.getElementById("g2c-scan-count").textContent = scannedConvos.length;
-                document.getElementById("g2c-scan-status").textContent = "Scanning project: " + projName + "...";
+                var countEl = document.getElementById("g2c-scan-count");
+                if (countEl) countEl.textContent = scannedConvos.length.toLocaleString();
+                var statusEl = document.getElementById("g2c-scan-status");
+                if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Scanning project: ' + projName + '\u2026';
                 projOffset += projItems.length;
                 if (projItems.length < 100) break;
                 await new Promise(function(r) { setTimeout(r, 500); });
@@ -407,10 +461,9 @@
       // Show filter panel
       setButtonState(btn, "done", scannedConvos.length + " conversations found");
 
-      // Clean up scan live display
-      var scanLiveEl = document.getElementById("g2c-scan-live");
-      if (scanLiveEl) scanLiveEl.parentNode.removeChild(scanLiveEl);
-      // Reset progress bar to determinate
+      // Clean up scan hero display
+      var scanHeroEl = document.getElementById("g2c-scan-hero");
+      if (scanHeroEl) scanHeroEl.parentNode.removeChild(scanHeroEl);
       var fillEl = document.getElementById("g2c-progress-fill");
       fillEl.classList.remove("indeterminate");
       fillEl.style.width = "0%";
@@ -424,8 +477,8 @@
     }
   }
 
+  // ========== FILTER PANEL (State 3) ==========
   function showFilterPanel() {
-    // Build model breakdown
     var models = {};
     var oldest = Infinity;
     var newest = 0;
@@ -438,7 +491,6 @@
     }
     var modelKeys = Object.keys(models).sort(function(a, b) { return models[b] - models[a]; });
 
-    // Format dates for inputs
     function tsToDate(ts) {
       if (!ts || ts === Infinity) return "";
       var d = new Date(ts > 1e12 ? ts : ts * 1000);
@@ -451,18 +503,24 @@
       modelCheckboxes += '<label class="g2c-model-row"><input type="checkbox" checked data-model="' + mk + '"> ' + mk + '<span class="cnt">' + models[mk] + '</span></label>';
     }
 
+    var scanSummary = '<div style="text-align:center;margin-bottom:14px;">' +
+      '<span style="font-size:28px;font-weight:800;color:#7eb8a0;">' + scannedConvos.length.toLocaleString() + '</span>' +
+      '<span style="font-size:12px;color:#888;"> conversations scanned</span>' +
+      '</div>';
+
     var filterHtml = '\
       <div class="g2c-filter-panel" id="g2c-filter-panel">\
+        ' + scanSummary + '\
         <div class="g2c-filter-section">\
           <div class="g2c-filter-label">Models</div>\
           <div class="g2c-filter-models" id="g2c-filter-models">' + modelCheckboxes + '</div>\
-          <div class="g2c-select-btns"><button id="g2c-sel-all">Select all</button> · <button id="g2c-sel-none">Select none</button></div>\
+          <div class="g2c-select-btns"><button id="g2c-sel-all">Select all</button> \u00B7 <button id="g2c-sel-none">Select none</button></div>\
         </div>\
         <div class="g2c-filter-section">\
           <div class="g2c-filter-label">Date range</div>\
           <div class="g2c-filter-row">\
             <input type="date" class="g2c-filter-input" id="g2c-date-from" value="' + tsToDate(oldest) + '">\
-            <span style="color:#555;">→</span>\
+            <span style="color:#555;">\u2192</span>\
             <input type="date" class="g2c-filter-input" id="g2c-date-to" value="' + tsToDate(newest) + '">\
           </div>\
         </div>\
@@ -484,60 +542,69 @@
         </button>\
       </div>';
 
-    // Insert filter panel after buttons, before progress
+    // Insert filter panel — with fallback for SPA DOM issues
+    var bodyEl = panel.querySelector(".g2c-body");
+    if (!bodyEl) {
+      log("Warning: panel body not found", "error");
+      return;
+    }
     var progressEl = document.getElementById("g2c-progress");
     var filterDiv = document.createElement("div");
     filterDiv.innerHTML = filterHtml;
-    progressEl.parentNode.insertBefore(filterDiv.firstElementChild || filterDiv.firstChild, progressEl);
+    var filterPanel = filterDiv.firstElementChild || filterDiv.firstChild;
+    if (progressEl && progressEl.parentNode) {
+      progressEl.parentNode.insertBefore(filterPanel, progressEl);
+    } else {
+      bodyEl.appendChild(filterPanel);
+    }
 
-    // Hide the main buttons
-    document.getElementById("g2c-btn-memory").style.display = "none";
-    document.getElementById("g2c-btn-convos").style.display = "none";
-    document.getElementById("g2c-btn-instructions").style.display = "none";
-    document.getElementById("g2c-btn-all").style.display = "none";
+    // Hide the main buttons — with null guards
+    var hideIds = ["g2c-btn-memory", "g2c-btn-convos", "g2c-btn-instructions", "g2c-btn-all"];
+    for (var hi = 0; hi < hideIds.length; hi++) {
+      var hideEl = document.getElementById(hideIds[hi]);
+      if (hideEl) hideEl.style.display = "none";
+    }
 
-    // Wire up select all/none buttons
-    document.getElementById("g2c-sel-all").addEventListener("click", function() {
+    // Wire up events using safeAddEvent (BUG FIX)
+    safeAddEvent("g2c-sel-all", "click", function() {
       var boxes = document.querySelectorAll("#g2c-filter-models input");
       for (var i = 0; i < boxes.length; i++) boxes[i].checked = true;
       updateFilterSummary();
     });
-    document.getElementById("g2c-sel-none").addEventListener("click", function() {
+    safeAddEvent("g2c-sel-none", "click", function() {
       var boxes = document.querySelectorAll("#g2c-filter-models input");
       for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
       updateFilterSummary();
     });
 
-    // Wire up drop zone click
-    document.getElementById("g2c-prev-drop").addEventListener("click", function() {
-      document.getElementById("g2c-prev-file").click();
+    safeAddEvent("g2c-prev-drop", "click", function() {
+      var fileInput = document.getElementById("g2c-prev-file");
+      if (fileInput) fileInput.click();
     });
 
-    // Wire up filter change events
     var filterInputs = document.querySelectorAll("#g2c-filter-models input, #g2c-date-from, #g2c-date-to, #g2c-limit");
     for (var fi = 0; fi < filterInputs.length; fi++) {
       filterInputs[fi].addEventListener("change", updateFilterSummary);
     }
 
-    // Previous export file handler
-    document.getElementById("g2c-prev-file").addEventListener("change", function() {
+    safeAddEvent("g2c-prev-file", "change", function() {
       if (this.files.length) loadPreviousExport(this.files[0]);
     });
     var dropEl = document.getElementById("g2c-prev-drop");
-    dropEl.addEventListener("dragover", function(e) { e.preventDefault(); this.style.borderColor = "#d4a574"; });
-    dropEl.addEventListener("dragleave", function() { this.style.borderColor = ""; });
-    dropEl.addEventListener("drop", function(e) {
-      e.preventDefault();
-      this.style.borderColor = "";
-      if (e.dataTransfer.files.length) loadPreviousExport(e.dataTransfer.files[0]);
-    });
+    if (dropEl) {
+      dropEl.addEventListener("dragover", function(e) { e.preventDefault(); this.style.borderColor = "#d4a574"; });
+      dropEl.addEventListener("dragleave", function() { this.style.borderColor = ""; });
+      dropEl.addEventListener("drop", function(e) {
+        e.preventDefault();
+        this.style.borderColor = "";
+        if (e.dataTransfer.files.length) loadPreviousExport(e.dataTransfer.files[0]);
+      });
+    }
 
-    // Download button
-    document.getElementById("g2c-btn-download").addEventListener("click", startFilteredDownload);
+    safeAddEvent("g2c-btn-download", "click", startFilteredDownload);
   }
 
   function estimateTime(count) {
-    // ~1.5 seconds per conversation (1s delay + fetch time)
     var secs = count * 1.5;
     if (secs < 60) return "~" + Math.round(secs) + " seconds";
     var mins = Math.round(secs / 60);
@@ -547,20 +614,17 @@
   }
 
   function getFilteredConvos() {
-    // Get selected models
     var selectedModels = {};
     var boxes = document.querySelectorAll("#g2c-filter-models input");
     for (var i = 0; i < boxes.length; i++) {
       if (boxes[i].checked) selectedModels[boxes[i].getAttribute("data-model")] = true;
     }
 
-    // Date range
     var fromStr = document.getElementById("g2c-date-from").value;
     var toStr = document.getElementById("g2c-date-to").value;
     var fromTs = fromStr ? new Date(fromStr + "T00:00:00").getTime() / 1000 : 0;
     var toTs = toStr ? new Date(toStr + "T23:59:59").getTime() / 1000 : Infinity;
 
-    // Limit
     var limit = parseInt(document.getElementById("g2c-limit").value) || 0;
 
     var filtered = [];
@@ -572,7 +636,6 @@
       var ts = c.update_time || c.create_time || 0;
       if (ts < fromTs || ts > toTs) continue;
 
-      // Skip if in previous export
       if (previousExportIds[c.id]) continue;
 
       filtered.push(c);
@@ -588,14 +651,18 @@
     var skipped = Object.keys(previousExportIds).length;
     var text = filtered.length + " conversations selected";
     if (skipped > 0) text += " (" + skipped + " skipped from previous export)";
-    summary.textContent = text;
-    dlBtn.querySelector(".g2c-btn-text span").textContent = "Download " + filtered.length + " conversations";
-    dlBtn.querySelector(".g2c-btn-sub").textContent = estimateTime(filtered.length);
+    if (summary) summary.textContent = text;
+    if (dlBtn) {
+      var spanEl = dlBtn.querySelector(".g2c-btn-text span");
+      if (spanEl) spanEl.textContent = "Download " + filtered.length + " conversations";
+      var subEl = dlBtn.querySelector(".g2c-btn-sub");
+      if (subEl) subEl.textContent = estimateTime(filtered.length);
+    }
   }
 
   function loadPreviousExport(file) {
     var dropEl = document.getElementById("g2c-prev-drop");
-    dropEl.textContent = "Loading " + file.name + "...";
+    if (dropEl) dropEl.textContent = "Loading " + file.name + "...";
     var reader = new FileReader();
     reader.onload = function(e) {
       try {
@@ -606,19 +673,22 @@
           for (var i = 0; i < convos.length; i++) {
             if (convos[i].id) previousExportIds[convos[i].id] = true;
           }
-          dropEl.textContent = "\u2705 " + Object.keys(previousExportIds).length + " conversations from previous export";
-          dropEl.className = "g2c-filter-drop active";
+          if (dropEl) {
+            dropEl.textContent = "\u2705 " + Object.keys(previousExportIds).length + " conversations from previous export";
+            dropEl.className = "g2c-filter-drop active";
+          }
           log("Loaded previous export: " + Object.keys(previousExportIds).length + " conversation IDs");
           updateFilterSummary();
         }
       } catch (err) {
-        dropEl.textContent = "\u274C Could not parse file";
+        if (dropEl) dropEl.textContent = "\u274C Could not parse file";
         log("Previous export error: " + err.message, "error");
       }
     };
     reader.readAsText(file);
   }
 
+  // ========== FILTERED DOWNLOAD (States 4 & 5) ==========
   async function startFilteredDownload() {
     var filtered = getFilteredConvos();
     if (filtered.length === 0) {
@@ -626,16 +696,23 @@
       return;
     }
 
-    var btn = document.getElementById("g2c-btn-download");
-    setButtonState(btn, "running", "Downloading 0/" + filtered.length + "...");
+    // Replace filter panel with download hero UI (State 4)
+    var filterPanel = document.getElementById("g2c-filter-panel");
+    if (filterPanel) {
+      filterPanel.innerHTML = '\
+        <div class="g2c-dl-hero" id="g2c-dl-hero">\
+          <span class="g2c-dl-count" id="g2c-dl-count">0</span>\
+          <span class="g2c-dl-of" id="g2c-dl-of"> / ' + filtered.length + '</span>\
+          <div class="g2c-dl-title" id="g2c-dl-title">Starting download\u2026</div>\
+        </div>\
+        <div style="margin:10px 0;">\
+          <div class="g2c-progress-bar"><div class="g2c-progress-fill" id="g2c-dl-fill" style="width:0%;"></div></div>\
+          <div class="g2c-dl-pct" id="g2c-dl-pct">0%</div>\
+        </div>\
+        <div class="g2c-dl-remaining" id="g2c-dl-remaining"></div>';
+    }
 
-    // Show determinate progress bar
-    document.getElementById("g2c-progress").style.display = "block";
-    document.getElementById("g2c-progress-fill").classList.remove("indeterminate");
-
-    // Disable filter inputs
-    var inputs = document.querySelectorAll("#g2c-filter-panel input, #g2c-filter-panel button:not(#g2c-btn-download)");
-    for (var fi = 0; fi < inputs.length; fi++) inputs[fi].disabled = true;
+    var startTime = Date.now();
 
     try {
       var token = await getToken();
@@ -643,7 +720,7 @@
 
       var fullExport = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.1",
+        tool: "GPT2Claude Migration Kit v2.2",
         format_version: 3,
         total_conversations: filtered.length,
         conversations: []
@@ -656,19 +733,43 @@
         var c = filtered[i];
         var title = c.title || "Untitled";
         var pct = Math.round(((i + 1) / filtered.length) * 100);
+        var completed = i + 1;
+        var remaining = filtered.length - completed;
 
-        setProgress(pct, (i + 1) + " / " + filtered.length + " \u2014 " + title);
-        setButtonState(btn, "running", "Downloading " + (i + 1) + "/" + filtered.length + "...");
+        // Update download hero UI
+        var dlCount = document.getElementById("g2c-dl-count");
+        var dlTitle = document.getElementById("g2c-dl-title");
+        var dlFill = document.getElementById("g2c-dl-fill");
+        var dlPct = document.getElementById("g2c-dl-pct");
+        var dlRemaining = document.getElementById("g2c-dl-remaining");
+
+        if (dlCount) dlCount.textContent = completed;
+        if (dlTitle) dlTitle.textContent = title;
+        if (dlFill) dlFill.style.width = pct + "%";
+        if (dlPct) dlPct.textContent = pct + "%";
+
+        // Calculate time remaining
+        if (dlRemaining && i > 0) {
+          var elapsed = (Date.now() - startTime) / 1000;
+          var perItem = elapsed / completed;
+          var secsLeft = Math.round(perItem * remaining);
+          if (secsLeft < 60) {
+            dlRemaining.textContent = "~" + secsLeft + " seconds remaining";
+          } else {
+            dlRemaining.textContent = "~" + Math.round(secsLeft / 60) + " minutes remaining";
+          }
+        }
 
         try {
-          var convoResp = await fetch(
-            "https://chatgpt.com/backend-api/conversation/" + c.id,
-            {credentials: "include", headers: headers}
-          );
+          var convoResp = await fetch("https://chatgpt.com/backend-api/conversation/" + c.id, {
+            credentials: "include",
+            headers: headers
+          });
 
           if (convoResp.status === 429) {
             log("Rate limited, waiting 30s...", "error");
-            setButtonState(btn, "running", "Rate limited \u2014 waiting 30s...");
+            if (dlTitle) dlTitle.textContent = "Rate limited \u2014 waiting 30s\u2026";
+            if (dlRemaining) dlRemaining.textContent = "Will resume automatically";
             await new Promise(function(r) { setTimeout(r, 30000); });
             i--;
             continue;
@@ -706,7 +807,8 @@
                   textParts.push(parts[p]);
                 } else if (parts[p] && typeof parts[p] === "object") {
                   if (parts[p].content_type === "image_asset_pointer" || parts[p].asset_pointer) {
-                    var imgName = (parts[p].metadata && parts[p].metadata.dalle && parts[p].metadata.dalle.prompt) ? "DALL-E: " + parts[p].metadata.dalle.prompt : "image";
+                    var imgName = (parts[p].metadata && parts[p].metadata.dalle && parts[p].metadata.dalle.prompt)
+                      ? "DALL-E: " + parts[p].metadata.dalle.prompt : "image";
                     textParts.push("[\uD83D\uDDBC " + imgName + "]");
                   }
                 }
@@ -729,6 +831,7 @@
             var current = rootId;
             var visited = {};
             var safety = 0;
+
             while (current && safety < 50000) {
               safety++;
               if (visited[current]) break;
@@ -807,6 +910,8 @@
           log("Error: " + title + " \u2014 " + err.message, "error");
           errorCount++;
           fullExport.conversations.push({id: c.id, title: title, error: err.message});
+          var dlTitle = document.getElementById("g2c-dl-title");
+          if (dlTitle) dlTitle.textContent = "Error: " + err.message;
         }
 
         await new Promise(function(r) { setTimeout(r, 1000); });
@@ -816,13 +921,34 @@
       var sizeMB = (json.length / 1024 / 1024).toFixed(1);
 
       downloadFile(json, "chatgpt_all_conversations.json", "application/json");
-      setProgress(100, "Complete! " + successCount + " conversations, ~" + sizeMB + " MB");
-      setButtonState(btn, "done", successCount + " conversations exported");
       log("DONE! " + successCount + " conversations, " + errorCount + " errors, ~" + sizeMB + " MB", "success");
+
+      // Show completion screen (State 5)
+      var filterPanel = document.getElementById("g2c-filter-panel");
+      if (filterPanel) {
+        filterPanel.innerHTML = '\
+          <div class="g2c-complete">\
+            <div class="g2c-complete-icon">\u2705</div>\
+            <div class="g2c-complete-title">Export Complete!</div>\
+            <div class="g2c-complete-sub">' + successCount + ' conversations \u00B7 ' + sizeMB + ' MB</div>\
+          </div>\
+          <div class="g2c-whatsnext">\
+            <div class="g2c-whatsnext-title">What\u2019s next?</div>\
+            <div class="g2c-whatsnext-item">\
+              <span style="color:#a0a0e0;">\uD83D\uDC40 Browse your data</span><br>\
+              <span style="color:#999;">Open the <a href="https://siamsnus.github.io/GPT2Claude-Migration-Kit/viewer.html" target="_blank">Conversation Viewer</a> to explore your chats. You can <a href="https://siamsnus.github.io/GPT2Claude-Migration-Kit/viewer.html" download target="_blank">download it</a> for fully offline use.</span>\
+            </div>\
+            <div class="g2c-whatsnext-item">\
+              <span style="color:#7eb8a0;">\uD83D\uDE80 Import to Claude</span> <span class="g2c-whatsnext-badge">recommended</span><br>\
+              <span style="color:#999;">Follow the <a href="https://siamsnus.github.io/GPT2Claude-Migration-Kit/#importing" target="_blank">import guide</a> to bring your history into Claude.</span>\
+            </div>\
+          </div>';
+      }
 
     } catch (err) {
       log("Download failed: " + err.message, "error");
-      setButtonState(btn, "error", err.message);
+      var dlTitle = document.getElementById("g2c-dl-title");
+      if (dlTitle) dlTitle.textContent = "Error: " + err.message;
     }
   }
 
@@ -842,7 +968,7 @@
 
       var result = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.1",
+        tool: "GPT2Claude Migration Kit v2.2",
         data: {}
       };
 
@@ -894,7 +1020,6 @@
     await exportInstructions();
     log("Memories & instructions done. Scanning conversations...");
     await exportConversations();
-    // exportConversations now shows filter panel — user clicks Download from there
     log("Memories & instructions exported. Configure conversation filters and click Download.", "success");
   });
 
@@ -903,6 +1028,44 @@
     logEl.classList.toggle("visible");
     this.textContent = logVisible ? "Show log \u25BC" : "Hide log \u25B2";
   });
+
+  // Copy log button
+  document.getElementById("g2c-copy-log").addEventListener("click", function() {
+    var copyBtn = this;
+    var entries = document.querySelectorAll(".g2c-log-entry");
+    var text = "";
+    for (var i = 0; i < entries.length; i++) {
+      text += entries[i].textContent + "\n";
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function() {
+        copyBtn.textContent = "\u2705 Copied!";
+        setTimeout(function() { copyBtn.textContent = "Copy log"; }, 2000);
+      }).catch(function() {
+        fallbackCopy(text, copyBtn);
+      });
+    } else {
+      fallbackCopy(text, copyBtn);
+    }
+  });
+
+  function fallbackCopy(text, btn) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      btn.textContent = "\u2705 Copied!";
+      setTimeout(function() { btn.textContent = "Copy log"; }, 2000);
+    } catch (e) {
+      btn.textContent = "Copy failed";
+      setTimeout(function() { btn.textContent = "Copy log"; }, 2000);
+    }
+    document.body.removeChild(ta);
+  }
 
   log("Ready. Click a button to start exporting.");
 })();

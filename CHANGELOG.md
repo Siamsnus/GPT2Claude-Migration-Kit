@@ -2,6 +2,27 @@
 
 All notable changes to the GPT→Claude Migration Kit.
 
+## [2.2.0] — 2026-02-16
+
+### Added
+- **Scan hero UI** — big animated counter (42px, pulsing), bouncing dots, "conversations found" label, reassurance text during scan
+- **Download progress hero** — clean counter showing "87 / 154", current conversation title, progress bar with percentage, real-time "~X minutes remaining" estimate
+- **Completion screen** — ✅ checkmark, "Export Complete!" with conversation count and file size, "What's next?" card linking to Conversation Viewer and import guide
+- **Copy Log button** — copies full log text to clipboard (with execCommand fallback for older browsers)
+- **Scan summary header** — filter panel now shows big green count of total conversations scanned
+
+### Fixed
+- **`addEventListener` null crash** — after scan completes, projects returning 404 could cause `showFilterPanel()` to crash when wiring event listeners on elements not yet in the DOM. Added `safeAddEvent()` helper with null guards and warning logs.
+- DOM insertion fallback — filter panel insertion now tries `progressEl.parentNode` first, falls back to `bodyEl.appendChild`
+- Button hiding now uses loop with null guards instead of direct access
+- All DOM updates in download progress use null guards to prevent crashes
+
+### Changed
+- Scan counter uses `.toLocaleString()` for thousand separators
+- Scan status messages improved: "Still scanning — this takes a minute, all good"
+- Project scan messages use proper ellipsis character (…)
+- Model tags use updated pill styling with SF Mono font, centered layout with top border separator
+
 ## [2.1.0] — 2026-02-16
 
 ### Added
