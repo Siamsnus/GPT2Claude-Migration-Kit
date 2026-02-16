@@ -69,6 +69,8 @@
   .msg-bubble { padding: 12px 16px; border-radius: 14px; font-size: 0.9rem; line-height: 1.65; max-width: 600px; word-wrap: break-word; white-space: pre-line; }
   .msg-bubble pre { white-space: pre-wrap; margin: 8px 0; }
   .msg-bubble strong { font-weight: 700; }
+  .img-placeholder { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.04); border: 1px dashed var(--border); border-radius: 10px; padding: 14px 16px; margin: 8px 0; color: var(--text-dim); font-size: 0.82rem; line-height: 1.4; }
+  .img-placeholder svg { flex-shrink: 0; }
   .message.user .msg-bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; }
   .message.assistant .msg-bubble { background: var(--ai-bubble); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
   .message.system .msg-bubble { background: rgba(126,184,160,0.06); border: 1px solid rgba(126,184,160,0.15); font-style: italic; color: var(--text-dim); font-size: 0.82rem; }
@@ -133,6 +135,7 @@
       <input type="file" id="file-input" accept=".json" style="display:none">
       <div class="or">or drag and drop your file here</div>
       <p style="font-size:0.78rem; color:var(--text-faint);">Works with files exported by <a href="https://siamsnus.github.io/GPT2Claude-Migration-Kit" style="color:var(--accent);text-decoration:none;">GPT→Claude Migration Kit</a> or ChatGPT's official export.</p>
+      <p style="font-size:0.75rem; color:var(--text-faint); margin-top:8px;">🔒 Everything runs in your browser — no data is uploaded anywhere. For extra peace of mind, <a href="viewer.html" download style="color:var(--accent);text-decoration:none;">download this page</a> and open it offline.</p>
     </div>
   </div>
 
@@ -150,6 +153,11 @@
       <button class="sort-btn" data-sort="oldest">Oldest</button>
       <button class="sort-btn" data-sort="alpha">A→Z</button>
       <button class="sort-btn" data-sort="longest">Longest</button>
+    </div>
+    <div class="filter-controls" id="filter-controls" style="padding:6px 20px 8px;border-bottom:1px solid var(--border);">
+      <select id="model-filter" style="width:100%;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:0.75rem;outline:none;cursor:pointer;">
+        <option value="">All models</option>
+      </select>
     </div>
     <div class="convo-list" id="convo-list"></div>
   </div>
@@ -170,6 +178,7 @@
 <script>
 var conversations = [];
 var currentSort = "newest";
+var currentModelFilter = "";
 var searchTimeout = null;
 
 // ===== FILE LOADING =====
@@ -299,6 +308,7 @@ function processData(data) {
       update_time: updateTime,
       _index: idx,
       model: c.model || c.default_model_slug || extractModel(c),
+      project: c.project || null,
       messageCount: c.message_count || msgs.length,
       messages: msgs
     };
@@ -321,6 +331,7 @@ function processData(data) {
   renderConversationList();
   setupSearch();
   setupSort();
+  setupModelFilter();
 }
 
 function extractModel(c) {
@@ -421,7 +432,12 @@ function renderConversationList(filter) {
   else if (currentSort === "alpha") sorted.sort(function(a,b) { return a.title.localeCompare(b.title); });
   else if (currentSort === "longest") sorted.sort(function(a,b) { return b.messageCount - a.messageCount; });
 
-  // Filter
+  // Filter by model
+  if (currentModelFilter) {
+    sorted = sorted.filter(function(c) { return c.model === currentModelFilter; });
+  }
+
+  // Filter by text
   if (filter) {
     var f = filter.toLowerCase();
     sorted = sorted.filter(function(c) {
@@ -451,6 +467,7 @@ function renderConversationList(filter) {
     html += '<div class="convo-item" data-id="' + c.id + '" onclick="openConversation(\'' + c.id + '\')">' +
       '<div class="title">' + escHtml(c.title) + '</div>' +
       '<div class="meta"><span>' + date + '</span><span>' + c.messageCount + ' msgs</span><span class="model">' + escHtml(c.model) + '</span></div>' +
+      (c.project ? '<div class="meta" style="margin-top:2px;"><span style="color:var(--green);">📁 ' + escHtml(c.project) + '</span></div>' : '') +
       (preview ? '<div class="preview">' + escHtml(preview) + '</div>' : '') +
       '</div>';
   }
@@ -476,7 +493,12 @@ function openConversation(id) {
   // Header
   document.getElementById("chat-title").textContent = c.title;
   var dateStr = formatDateLong(c.create_time);
-  document.getElementById("chat-meta").textContent = dateStr + (c.model !== "unknown" ? " · " + c.model : "") + " · " + c.messageCount + " messages";
+  var metaParts = [];
+  if (dateStr) metaParts.push(dateStr);
+  if (c.model && c.model !== "unknown") metaParts.push(c.model);
+  metaParts.push(c.messageCount + " messages");
+  if (c.project) metaParts.push("📁 " + c.project);
+  document.getElementById("chat-meta").textContent = metaParts.join(" · ");
 
   // Messages
   var container = document.getElementById("chat-messages");
@@ -605,6 +627,28 @@ function setupSort() {
   }
 }
 
+// ===== MODEL FILTER =====
+function setupModelFilter() {
+  var models = {};
+  for (var i = 0; i < conversations.length; i++) {
+    var m = conversations[i].model;
+    if (m && m !== "unknown") models[m] = (models[m] || 0) + 1;
+  }
+  var select = document.getElementById("model-filter");
+  var sortedModels = Object.keys(models).sort();
+  select.innerHTML = '<option value="">All models (' + conversations.length + ')</option>';
+  for (var i = 0; i < sortedModels.length; i++) {
+    var opt = document.createElement("option");
+    opt.value = sortedModels[i];
+    opt.textContent = sortedModels[i] + " (" + models[sortedModels[i]] + ")";
+    select.appendChild(opt);
+  }
+  select.addEventListener("change", function() {
+    currentModelFilter = this.value;
+    renderConversationList();
+  });
+}
+
 // ===== MOBILE =====
 function toggleSidebar() {
   document.getElementById("sidebar").classList.toggle("hidden");
@@ -618,6 +662,8 @@ function escHtml(s) {
 
 function renderMarkdown(text) {
   var s = escHtml(text);
+  // Image placeholders — [🖼 description] markers from export
+  s = s.replace(/\[🖼\s*([^\]]*)\]/g, '<div class="img-placeholder"><svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="rgba(212,165,116,0.1)"/><path d="M10 24l5-7 4 5 3-4 4 6H10z" fill="rgba(212,165,116,0.3)"/><circle cx="23" cy="14" r="3" fill="rgba(212,165,116,0.3)"/></svg><span>$1<br><span style="font-size:0.72rem;color:var(--text-faint);">Image not included in export</span></span></div>');
   // Headers
   s = s.replace(/^### (.+)$/gm, '<strong style="font-size:1.05em;">$1</strong>');
   s = s.replace(/^## (.+)$/gm, '<strong style="font-size:1.1em;">$1</strong>');

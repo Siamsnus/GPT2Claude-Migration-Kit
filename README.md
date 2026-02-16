@@ -13,7 +13,7 @@ Export everything from ChatGPT — memories, conversations, and custom instructi
 | Export | Description | Output file |
 |--------|-------------|-------------|
 | 🧠 **Memories** | Every fact ChatGPT memorized about you | `chatgpt_memories.md` |
-| 💬 **Conversations** | Every chat with full message history, timestamps, model info | `chatgpt_all_conversations.json` |
+| 💬 **Conversations** | Every chat including projects, with full message history, timestamps, model info | `chatgpt_all_conversations.json` |
 | ⚙️ **Instructions** | Custom instructions and account settings | `chatgpt_instructions.json` |
 
 No existing browser extension exports memory items or custom instructions. This tool does.
@@ -24,8 +24,10 @@ Don't want to read raw JSON? Open **[viewer.html](https://siamsnus.github.io/GPT
 
 - Browse all conversations by title and date
 - Sort by newest, oldest, alphabetical, or longest
+- Filter by model (GPT-4o, GPT-5.2, etc.)
 - Search across all messages instantly
 - Read conversations in a familiar chat format with rendered markdown
+- Project conversations shown with project badge
 
 Everything runs locally — no data is uploaded anywhere. For extra privacy, download `viewer.html` and open it offline — it works the same way, no internet needed.
 
@@ -137,7 +139,8 @@ Your data. Your choice where it lives.
 
 ## Planned features
 
-- **Image export** — Download images (uploaded photos, DALL-E generations) referenced in conversations. Currently the JSON contains image references but not the actual files. This would add a separate "Export Images" button that fetches them from OpenAI's CDN using your authenticated session. PRs welcome.
+- **Image export** — Download images (uploaded photos, DALL-E generations) referenced in conversations. Currently the JSON contains image markers but not the actual files. PRs welcome.
+- **Branch/regeneration viewer** — Show alternative responses and regenerated replies in the viewer (data is already captured in the export)
 - **Memory viewer** — Browse and search exported memory items in the viewer
 - **Import to other platforms** — Tested import prompts for Gemini, Copilot, etc.
 

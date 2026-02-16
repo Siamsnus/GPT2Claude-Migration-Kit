@@ -292,6 +292,54 @@
       }
 
       log("Total conversations: " + allConvos.length);
+
+      // Try to fetch project conversations too
+      try {
+        log("Checking for projects...");
+        var projResp = await fetch(
+          "https://chatgpt.com/backend-api/projects?offset=0&limit=100",
+          {credentials: "include", headers: headers}
+        );
+        if (projResp.status === 200) {
+          var projData = await projResp.json();
+          var projects = projData.items || projData.projects || projData || [];
+          if (Array.isArray(projects) && projects.length > 0) {
+            log("Found " + projects.length + " projects");
+            for (var pi = 0; pi < projects.length; pi++) {
+              var proj = projects[pi];
+              var projName = proj.title || proj.name || ("Project " + (pi + 1));
+              var projId = proj.id || proj.project_id;
+              log("Fetching project: " + projName);
+              var projOffset = 0;
+              while (true) {
+                var projConvoResp = await fetch(
+                  "https://chatgpt.com/backend-api/conversations?project_id=" + projId + "&offset=" + projOffset + "&limit=100&order=updated",
+                  {credentials: "include", headers: headers}
+                );
+                if (projConvoResp.status !== 200) break;
+                var projConvoData = await projConvoResp.json();
+                var projItems = projConvoData.items || [];
+                for (var pj = 0; pj < projItems.length; pj++) {
+                  projItems[pj]._project = projName;
+                  projItems[pj]._project_id = projId;
+                  allConvos.push(projItems[pj]);
+                }
+                projOffset += projItems.length;
+                if (projItems.length < 100) break;
+                await new Promise(function(r) { setTimeout(r, 500); });
+              }
+            }
+            log("Total with projects: " + allConvos.length);
+          } else {
+            log("No projects found");
+          }
+        } else {
+          log("Projects not available (HTTP " + projResp.status + ")");
+        }
+      } catch (projErr) {
+        log("Projects check failed: " + projErr.message + " (continuing without)");
+      }
+
       setButtonState(btn, "running", "Downloading 0/" + allConvos.length + "...");
 
       var fullExport = {
@@ -358,6 +406,11 @@
                   for (var p = 0; p < parts.length; p++) {
                     if (typeof parts[p] === "string") {
                       textParts.push(parts[p]);
+                    } else if (parts[p] && typeof parts[p] === "object") {
+                      if (parts[p].content_type === "image_asset_pointer" || parts[p].asset_pointer) {
+                        var imgName = (parts[p].metadata && parts[p].metadata.dalle && parts[p].metadata.dalle.prompt) ? "DALL-E: " + parts[p].metadata.dalle.prompt : "image";
+                        textParts.push("[🖼 " + imgName + "]");
+                      }
                     }
                   }
                   text = textParts.join("\n");
@@ -390,6 +443,8 @@
             create_time: c.create_time,
             update_time: c.update_time,
             model: detail.default_model_slug || null,
+            project: c._project || null,
+            project_id: c._project_id || null,
             message_count: messages.length,
             messages: messages
           });

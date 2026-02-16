@@ -1,0 +1,53 @@
+# Changelog
+
+All notable changes to the GPT→Claude Migration Kit.
+
+## [2.1.0] — 2026-02-16
+
+### Added
+- **Conversation Viewer** (`viewer.html`) — browse, search, and read exported conversations in a chat-like interface. Works offline.
+- **Model filter** — dropdown in viewer to filter conversations by model (GPT-4o, GPT-5.2, etc.) with conversation counts
+- **Project export** — conversations inside ChatGPT Projects are now included in the export, tagged with project name
+- **Markdown rendering** — viewer renders bold, headers, code blocks, lists, and links instead of showing raw markdown
+- **Image placeholders** — image references in conversations show an inline SVG placeholder with description instead of a blank gap
+- **Metadata filtering** — internal system messages (model_editable_context, etc.) are hidden in the viewer
+- **Loading progress** — file size and progress bar when loading large JSON files into the viewer
+- **Privacy note** — viewer includes download link for offline use
+
+### Fixed
+- Date sorting (newest/oldest) now works when timestamps are null or strings
+- Sidebar previews show first user message instead of hidden system messages
+- Search skips metadata messages
+
+### Changed
+- Export now captures image references as `[🖼 DALL-E: prompt]` or `[🖼 image]` markers instead of silently dropping them
+- Landing page rebuilt with updated bookmarklet
+
+## [2.0.0] — 2026-02-15
+
+### Added
+- **Export All button** — exports memories, instructions, and conversations in one click
+- **Browser-aware landing page** — auto-detects Chrome/Firefox/other and shows appropriate installation instructions
+- **Firefox support** — manual bookmark creation flow with copy button (Firefox strips `javascript:` from dragged links)
+- **Console paste method** — copy full script for any browser via F12 → Console
+- All external links (chatgpt.com, claude.ai) now clickable and open in new tabs
+
+### Fixed
+- 404 handling for `/backend-api/settings` — logs "not available (skipped)" instead of error
+- CSP bypass — entire script embedded inline in bookmarklet URL, no external fetches
+
+### Changed
+- Panel UI: lighter background, more spacing, larger buttons, thicker progress bar
+- Bookmarklet fully self-contained (no external script loading)
+
+## [1.0.0] — 2026-02-14
+
+### Added
+- Initial release
+- Export memories via `/backend-api/memories`
+- Export all conversations via `/backend-api/conversations` + `/backend-api/conversation/{id}`
+- Export custom instructions via `/backend-api/user_system_messages`
+- Floating export panel with progress bar and log
+- Draggable panel with close button
+- Rate limit handling with automatic retry
+- Claude import prompts in README
