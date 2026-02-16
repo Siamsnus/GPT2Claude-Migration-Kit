@@ -275,6 +275,25 @@
     return cachedToken;
   }
 
+  // Extract model from conversation metadata — tries multiple field names
+  function getConvoModel(c) {
+    return c.default_model_slug || c.model || c.model_slug || c.gpt_model || "unknown";
+  }
+
+  // Extract timestamp from conversation — handles epoch (seconds or ms) and ISO strings
+  function getConvoTime(c) {
+    var raw = c.update_time || c.updated_at || c.create_time || c.created_at || 0;
+    if (!raw) return 0;
+    if (typeof raw === "string") {
+      // ISO date string
+      var parsed = new Date(raw).getTime() / 1000;
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    // Epoch: if > 1e12 it's milliseconds, convert to seconds
+    if (raw > 1e12) return raw / 1000;
+    return raw;
+  }
+
   // ========== EXPORT: MEMORIES ==========
   async function exportMemories() {
     var btn = document.getElementById("g2c-btn-memory");
@@ -373,9 +392,18 @@
         var items = listData.items || [];
         log("Batch: " + items.length + " conversations (offset " + offset + ")");
 
+        // Log first item's keys for diagnostics
+        if (offset === 0 && items.length > 0) {
+          var sampleKeys = Object.keys(items[0]).join(", ");
+          log("API fields: " + sampleKeys);
+          var sample = items[0];
+          log("Sample model: " + (sample.default_model_slug || sample.model || sample.model_slug || "null"));
+          log("Sample time: update=" + sample.update_time + " create=" + sample.create_time);
+        }
+
         for (var j = 0; j < items.length; j++) {
           scannedConvos.push(items[j]);
-          var m = items[j].default_model_slug || "unknown";
+          var m = getConvoModel(items[j]);
           liveModels[m] = (liveModels[m] || 0) + 1;
         }
 
@@ -484,16 +512,24 @@
     var newest = 0;
     for (var i = 0; i < scannedConvos.length; i++) {
       var c = scannedConvos[i];
-      var m = c.default_model_slug || "unknown";
+      var m = getConvoModel(c);
       models[m] = (models[m] || 0) + 1;
-      if (c.update_time && c.update_time < oldest) oldest = c.update_time;
-      if (c.update_time && c.update_time > newest) newest = c.update_time;
+      var t = getConvoTime(c);
+      if (t > 0 && t < oldest) oldest = t;
+      if (t > 0 && t > newest) newest = t;
     }
     var modelKeys = Object.keys(models).sort(function(a, b) { return models[b] - models[a]; });
 
     function tsToDate(ts) {
       if (!ts || ts === Infinity) return "";
+      if (typeof ts === "string") {
+        // ISO string — just extract the date part
+        var d = new Date(ts);
+        if (isNaN(d.getTime())) return "";
+        return d.toISOString().slice(0, 10);
+      }
       var d = new Date(ts > 1e12 ? ts : ts * 1000);
+      if (isNaN(d.getTime())) return "";
       return d.toISOString().slice(0, 10);
     }
 
@@ -602,6 +638,13 @@
     }
 
     safeAddEvent("g2c-btn-download", "click", startFilteredDownload);
+
+    // Ensure all model checkboxes are programmatically checked (defensive)
+    var allBoxes = document.querySelectorAll("#g2c-filter-models input");
+    for (var bi = 0; bi < allBoxes.length; bi++) allBoxes[bi].checked = true;
+
+    // Force-recalculate summary after DOM is fully wired
+    updateFilterSummary();
   }
 
   function estimateTime(count) {
@@ -614,34 +657,46 @@
   }
 
   function getFilteredConvos() {
-    var selectedModels = {};
-    var boxes = document.querySelectorAll("#g2c-filter-models input");
-    for (var i = 0; i < boxes.length; i++) {
-      if (boxes[i].checked) selectedModels[boxes[i].getAttribute("data-model")] = true;
+    try {
+      var selectedModels = {};
+      var boxes = document.querySelectorAll("#g2c-filter-models input");
+      for (var i = 0; i < boxes.length; i++) {
+        if (boxes[i].checked) selectedModels[boxes[i].getAttribute("data-model")] = true;
+      }
+
+      // If no models selected, return all (fail-open)
+      var hasModelFilter = Object.keys(selectedModels).length > 0;
+
+      var fromEl = document.getElementById("g2c-date-from");
+      var toEl = document.getElementById("g2c-date-to");
+      var limitEl = document.getElementById("g2c-limit");
+
+      var fromStr = fromEl ? fromEl.value : "";
+      var toStr = toEl ? toEl.value : "";
+      var fromTs = fromStr ? new Date(fromStr + "T00:00:00").getTime() / 1000 : 0;
+      var toTs = toStr ? new Date(toStr + "T23:59:59").getTime() / 1000 : Infinity;
+
+      var limit = limitEl ? (parseInt(limitEl.value) || 0) : 0;
+
+      var filtered = [];
+      for (var i = 0; i < scannedConvos.length; i++) {
+        var c = scannedConvos[i];
+        var model = getConvoModel(c);
+        if (hasModelFilter && !selectedModels[model]) continue;
+
+        var ts = getConvoTime(c);
+        if (ts > 0 && (ts < fromTs || ts > toTs)) continue;
+
+        if (previousExportIds[c.id]) continue;
+
+        filtered.push(c);
+        if (limit > 0 && filtered.length >= limit) break;
+      }
+      return filtered;
+    } catch (err) {
+      log("Filter error: " + err.message, "error");
+      return scannedConvos; // fail-open: return all
     }
-
-    var fromStr = document.getElementById("g2c-date-from").value;
-    var toStr = document.getElementById("g2c-date-to").value;
-    var fromTs = fromStr ? new Date(fromStr + "T00:00:00").getTime() / 1000 : 0;
-    var toTs = toStr ? new Date(toStr + "T23:59:59").getTime() / 1000 : Infinity;
-
-    var limit = parseInt(document.getElementById("g2c-limit").value) || 0;
-
-    var filtered = [];
-    for (var i = 0; i < scannedConvos.length; i++) {
-      var c = scannedConvos[i];
-      var model = c.default_model_slug || "unknown";
-      if (!selectedModels[model]) continue;
-
-      var ts = c.update_time || c.create_time || 0;
-      if (ts < fromTs || ts > toTs) continue;
-
-      if (previousExportIds[c.id]) continue;
-
-      filtered.push(c);
-      if (limit > 0 && filtered.length >= limit) break;
-    }
-    return filtered;
   }
 
   function updateFilterSummary() {
@@ -893,7 +948,7 @@
             title: title,
             create_time: c.create_time,
             update_time: c.update_time,
-            model: detail.default_model_slug || null,
+            model: detail.default_model_slug || detail.model || null,
             project: c._project || null,
             project_id: c._project_id || null,
             has_branches: hasBranches,
