@@ -5,6 +5,10 @@ All notable changes to the GPT→Claude Migration Kit.
 ## [2.2.0] — 2026-02-16
 
 ### Added
+- **⚡ Batch download engine** — uses undocumented `/conversations/batch` POST endpoint to download 10 conversations per request instead of one-by-one. Reduces a 3,357 conversation export from ~1.4 hours to ~6 minutes. Automatically falls back to individual downloads if batch endpoint is unavailable.
+- **Model breakdown on completion** — completion screen now shows model distribution (e.g. "gpt-4o (1200), gpt-5-2 (800)") since models are extracted from message metadata during download
+- **Elapsed time on completion** — shows total export duration
+- **Batch/individual mode indicator** — shows ⚡ or 🐢 during download so user knows which mode is active
 - **Scan hero UI** — big animated counter (42px, pulsing), bouncing dots, "conversations found" label, reassurance text during scan
 - **Download progress hero** — clean counter showing "87 / 154", current conversation title, progress bar with percentage, real-time "~X minutes remaining" estimate
 - **Completion screen** — ✅ checkmark, "Export Complete!" with conversation count and file size, "What's next?" card linking to Conversation Viewer and import guide
@@ -12,7 +16,10 @@ All notable changes to the GPT→Claude Migration Kit.
 - **Scan summary header** — filter panel now shows big green count of total conversations scanned
 
 ### Fixed
+- **OpenAI API field changes** — `default_model_slug` removed from list API, timestamps changed from epoch numbers to ISO 8601 strings. Added `getConvoModel()` and `getConvoTime()` helpers that try multiple field names and handle both formats.
 - **`addEventListener` null crash** — after scan completes, projects returning 404 could cause `showFilterPanel()` to crash when wiring event listeners on elements not yet in the DOM. Added `safeAddEvent()` helper with null guards and warning logs.
+- **"0 conversations selected" bug** — filter now fails-open: returns all conversations if no model checkboxes found. Date filter skips conversations with no valid timestamp instead of filtering them out. Whole function wrapped in try/catch.
+- **Diagnostic logging** — first batch now logs `API fields:`, `Sample model:`, `Sample time:` to help debug future API changes
 - DOM insertion fallback — filter panel insertion now tries `progressEl.parentNode` first, falls back to `bodyEl.appendChild`
 - Button hiding now uses loop with null guards instead of direct access
 - All DOM updates in download progress use null guards to prevent crashes

@@ -45,6 +45,7 @@
     .g2c-complete-icon { font-size: 36px; margin-bottom: 6px; }\
     .g2c-complete-title { font-size: 18px; font-weight: 700; color: #7eb8a0; }\
     .g2c-complete-sub { font-size: 12px; color: #888; margin-top: 6px; }\
+    .g2c-complete-models { font-size: 11px; color: #d4a574; margin-top: 6px; font-family: 'SF Mono', Consolas, monospace; }\
     .g2c-whatsnext { margin: 16px 0; padding: 14px; background: #141418; border: 1px solid #252530; border-radius: 10px; }\
     .g2c-whatsnext-title { font-size: 11px; color: #888; margin-bottom: 10px; font-weight: 600; }\
     .g2c-whatsnext-item { font-size: 12px; color: #ccc; line-height: 1.8; margin-bottom: 10px; }\
@@ -343,6 +344,7 @@
   // ========== EXPORT: CONVERSATIONS ==========
   var scannedConvos = [];
   var previousExportIds = {};
+  var BATCH_SIZE = 10;
 
   async function exportConversations() {
     var btn = document.getElementById("g2c-btn-convos");
@@ -648,8 +650,9 @@
   }
 
   function estimateTime(count) {
-    var secs = count * 1.5;
-    if (secs < 60) return "~" + Math.round(secs) + " seconds";
+    // Batch mode: ~10 conversations per 0.5-1s call
+    var secs = Math.ceil(count / BATCH_SIZE) * 1.0;
+    if (secs < 60) return "~" + Math.max(Math.round(secs), 1) + " seconds";
     var mins = Math.round(secs / 60);
     if (mins < 60) return "~" + mins + " minutes";
     var hrs = (secs / 3600).toFixed(1);
@@ -743,7 +746,188 @@
     reader.readAsText(file);
   }
 
+  // ========== CONVERSATION PROCESSING HELPERS ==========
+  function extractNodeText(node) {
+    if (!node || !node.message || !node.message.content) return "";
+    var parts = node.message.content.parts;
+    if (!Array.isArray(parts)) return JSON.stringify(node.message.content);
+    var textParts = [];
+    for (var p = 0; p < parts.length; p++) {
+      if (typeof parts[p] === "string") {
+        textParts.push(parts[p]);
+      } else if (parts[p] && typeof parts[p] === "object") {
+        if (parts[p].content_type === "image_asset_pointer" || parts[p].asset_pointer) {
+          var imgName = (parts[p].metadata && parts[p].metadata.dalle && parts[p].metadata.dalle.prompt)
+            ? "DALL-E: " + parts[p].metadata.dalle.prompt : "image";
+          textParts.push("[\uD83D\uDDBC " + imgName + "]");
+        }
+      }
+    }
+    return textParts.join("\n");
+  }
+
+  function extractNodeRole(node) {
+    return (node.message && node.message.author && node.message.author.role) || "unknown";
+  }
+
+  function extractNodeModel(node) {
+    return (node.message && node.message.metadata && node.message.metadata.model_slug) || null;
+  }
+
+  function extractNodeTime(node) {
+    return (node.message && node.message.create_time) || null;
+  }
+
+  function processConversationDetail(detail, listItem) {
+    var messages = [];
+    var hasBranches = false;
+
+    if (detail.mapping) {
+      var mapKeys = Object.keys(detail.mapping);
+      var rootId = null;
+      for (var mk = 0; mk < mapKeys.length; mk++) {
+        if (!detail.mapping[mapKeys[mk]].parent) {
+          rootId = mapKeys[mk];
+          break;
+        }
+      }
+      if (!rootId) rootId = mapKeys[0];
+
+      var current = rootId;
+      var visited = {};
+      var safety = 0;
+
+      while (current && safety < 50000) {
+        safety++;
+        if (visited[current]) break;
+        visited[current] = true;
+        var node = detail.mapping[current];
+        if (!node) break;
+
+        if (node.message && node.message.content) {
+          var text = extractNodeText(node);
+          if (text.trim() !== "") {
+            var msgObj = {
+              role: extractNodeRole(node),
+              content: text,
+              timestamp: extractNodeTime(node),
+              model: extractNodeModel(node)
+            };
+
+            if (node.parent && detail.mapping[node.parent]) {
+              var parentNode = detail.mapping[node.parent];
+              if (parentNode.children && parentNode.children.length > 1) {
+                var alts = [];
+                for (var ci = 0; ci < parentNode.children.length; ci++) {
+                  var sibId = parentNode.children[ci];
+                  if (sibId === current) continue;
+                  var sib = detail.mapping[sibId];
+                  if (sib && sib.message && sib.message.content) {
+                    var sibText = extractNodeText(sib);
+                    if (sibText.trim()) {
+                      alts.push({
+                        content: sibText,
+                        role: extractNodeRole(sib),
+                        timestamp: extractNodeTime(sib),
+                        model: extractNodeModel(sib)
+                      });
+                    }
+                  }
+                }
+                if (alts.length > 0) {
+                  msgObj.alternatives = alts;
+                  hasBranches = true;
+                }
+              }
+            }
+
+            messages.push(msgObj);
+          }
+        }
+
+        if (node.children && node.children.length > 0) {
+          current = node.children[node.children.length - 1];
+        } else {
+          break;
+        }
+      }
+    }
+
+    // Extract model from mapping metadata (since list API no longer provides it)
+    var model = detail.default_model_slug || null;
+    if (!model && detail.mapping) {
+      var mKeys = Object.keys(detail.mapping);
+      for (var mi = 0; mi < mKeys.length; mi++) {
+        var mNode = detail.mapping[mKeys[mi]];
+        if (mNode && mNode.message && mNode.message.metadata && mNode.message.metadata.model_slug) {
+          model = mNode.message.metadata.model_slug;
+          break;
+        }
+      }
+    }
+
+    return {
+      id: detail.conversation_id || (listItem && listItem.id) || detail.id,
+      title: detail.title || (listItem && listItem.title) || "Untitled",
+      create_time: detail.create_time || (listItem && listItem.create_time) || null,
+      update_time: detail.update_time || (listItem && listItem.update_time) || null,
+      model: model,
+      project: (listItem && listItem._project) || null,
+      project_id: (listItem && listItem._project_id) || null,
+      has_branches: hasBranches,
+      message_count: messages.length,
+      messages: messages
+    };
+  }
+
   // ========== FILTERED DOWNLOAD (States 4 & 5) ==========
+
+  function updateDlUI(completed, total, title, startTime) {
+    var pct = Math.round((completed / total) * 100);
+    var remaining = total - completed;
+
+    var dlCount = document.getElementById("g2c-dl-count");
+    var dlTitle = document.getElementById("g2c-dl-title");
+    var dlFill = document.getElementById("g2c-dl-fill");
+    var dlPct = document.getElementById("g2c-dl-pct");
+    var dlRemaining = document.getElementById("g2c-dl-remaining");
+    var dlMode = document.getElementById("g2c-dl-mode");
+
+    if (dlCount) dlCount.textContent = completed;
+    if (dlTitle) dlTitle.textContent = title;
+    if (dlFill) dlFill.style.width = pct + "%";
+    if (dlPct) dlPct.textContent = pct + "%";
+
+    if (dlRemaining && completed > 0) {
+      var elapsed = (Date.now() - startTime) / 1000;
+      var perItem = elapsed / completed;
+      var secsLeft = Math.round(perItem * remaining);
+      if (secsLeft < 60) {
+        dlRemaining.textContent = "~" + secsLeft + " seconds remaining";
+      } else {
+        dlRemaining.textContent = "~" + Math.round(secsLeft / 60) + " minutes remaining";
+      }
+    }
+  }
+
+  async function downloadBatch(ids, token) {
+    var resp = await fetch("https://chatgpt.com/backend-api/conversations/batch", {
+      method: "POST",
+      credentials: "include",
+      headers: {"Authorization": "Bearer " + token, "Content-Type": "application/json"},
+      body: JSON.stringify({conversation_ids: ids})
+    });
+    return resp;
+  }
+
+  async function downloadSingle(id, token) {
+    var resp = await fetch("https://chatgpt.com/backend-api/conversation/" + id, {
+      credentials: "include",
+      headers: {"Authorization": "Bearer " + token}
+    });
+    return resp;
+  }
+
   async function startFilteredDownload() {
     var filtered = getFilteredConvos();
     if (filtered.length === 0) {
@@ -764,14 +948,14 @@
           <div class="g2c-progress-bar"><div class="g2c-progress-fill" id="g2c-dl-fill" style="width:0%;"></div></div>\
           <div class="g2c-dl-pct" id="g2c-dl-pct">0%</div>\
         </div>\
-        <div class="g2c-dl-remaining" id="g2c-dl-remaining"></div>';
+        <div class="g2c-dl-remaining" id="g2c-dl-remaining"></div>\
+        <div class="g2c-dl-mode" id="g2c-dl-mode" style="text-align:center;font-size:10px;color:#666;margin-top:4px;"></div>';
     }
 
     var startTime = Date.now();
 
     try {
       var token = await getToken();
-      var headers = {"Authorization": "Bearer " + token};
 
       var fullExport = {
         export_date: new Date().toISOString(),
@@ -783,193 +967,147 @@
 
       var successCount = 0;
       var errorCount = 0;
+      var useBatch = true;
 
-      for (var i = 0; i < filtered.length; i++) {
-        var c = filtered[i];
-        var title = c.title || "Untitled";
-        var pct = Math.round(((i + 1) / filtered.length) * 100);
-        var completed = i + 1;
-        var remaining = filtered.length - completed;
+      // Build ID-to-listItem lookup
+      var listLookup = {};
+      for (var li = 0; li < filtered.length; li++) {
+        listLookup[filtered[li].id] = filtered[li];
+      }
 
-        // Update download hero UI
-        var dlCount = document.getElementById("g2c-dl-count");
-        var dlTitle = document.getElementById("g2c-dl-title");
-        var dlFill = document.getElementById("g2c-dl-fill");
-        var dlPct = document.getElementById("g2c-dl-pct");
-        var dlRemaining = document.getElementById("g2c-dl-remaining");
+      // ---- TRY BATCH MODE FIRST ----
+      log("Using batch download (10 at a time)\u2026");
+      var dlMode = document.getElementById("g2c-dl-mode");
+      if (dlMode) dlMode.textContent = "\u26A1 Batch mode \u2014 10x faster";
 
-        if (dlCount) dlCount.textContent = completed;
-        if (dlTitle) dlTitle.textContent = title;
-        if (dlFill) dlFill.style.width = pct + "%";
-        if (dlPct) dlPct.textContent = pct + "%";
-
-        // Calculate time remaining
-        if (dlRemaining && i > 0) {
-          var elapsed = (Date.now() - startTime) / 1000;
-          var perItem = elapsed / completed;
-          var secsLeft = Math.round(perItem * remaining);
-          if (secsLeft < 60) {
-            dlRemaining.textContent = "~" + secsLeft + " seconds remaining";
-          } else {
-            dlRemaining.textContent = "~" + Math.round(secsLeft / 60) + " minutes remaining";
-          }
-        }
+      var batchIndex = 0;
+      while (batchIndex < filtered.length && useBatch) {
+        var batchItems = filtered.slice(batchIndex, batchIndex + BATCH_SIZE);
+        var batchIds = [];
+        for (var bi = 0; bi < batchItems.length; bi++) batchIds.push(batchItems[bi].id);
 
         try {
-          var convoResp = await fetch("https://chatgpt.com/backend-api/conversation/" + c.id, {
-            credentials: "include",
-            headers: headers
-          });
+          var batchResp = await downloadBatch(batchIds, token);
 
-          if (convoResp.status === 429) {
-            log("Rate limited, waiting 30s...", "error");
+          if (batchResp.status === 429) {
+            log("Rate limited, waiting 30s\u2026", "error");
+            var dlTitle = document.getElementById("g2c-dl-title");
+            var dlRemaining = document.getElementById("g2c-dl-remaining");
             if (dlTitle) dlTitle.textContent = "Rate limited \u2014 waiting 30s\u2026";
             if (dlRemaining) dlRemaining.textContent = "Will resume automatically";
             await new Promise(function(r) { setTimeout(r, 30000); });
-            i--;
-            continue;
+            continue; // retry same batch
           }
 
-          if (convoResp.status !== 200) {
-            log("Skipped: " + title + " (HTTP " + convoResp.status + ")", "error");
-            errorCount++;
-            fullExport.conversations.push({id: c.id, title: title, error: "HTTP " + convoResp.status});
-            continue;
+          if (batchResp.status === 422 || batchResp.status === 405 || batchResp.status === 404) {
+            // Batch endpoint not available — fall back to individual
+            log("Batch endpoint unavailable (HTTP " + batchResp.status + "), falling back to individual downloads\u2026", "error");
+            useBatch = false;
+            break;
           }
 
-          var detail = await convoResp.json();
-          var messages = [];
-          var hasBranches = false;
+          if (batchResp.status !== 200) {
+            log("Batch error (HTTP " + batchResp.status + "), falling back\u2026", "error");
+            useBatch = false;
+            break;
+          }
 
-          if (detail.mapping) {
-            var mapKeys = Object.keys(detail.mapping);
-            var rootId = null;
-            for (var mk = 0; mk < mapKeys.length; mk++) {
-              if (!detail.mapping[mapKeys[mk]].parent) {
-                rootId = mapKeys[mk];
-                break;
-              }
-            }
-            if (!rootId) rootId = mapKeys[0];
+          var batchData = await batchResp.json();
+          var batchArr = Array.isArray(batchData) ? batchData : Object.values(batchData);
 
-            function extractNodeText(node) {
-              if (!node || !node.message || !node.message.content) return "";
-              var parts = node.message.content.parts;
-              if (!Array.isArray(parts)) return JSON.stringify(node.message.content);
-              var textParts = [];
-              for (var p = 0; p < parts.length; p++) {
-                if (typeof parts[p] === "string") {
-                  textParts.push(parts[p]);
-                } else if (parts[p] && typeof parts[p] === "object") {
-                  if (parts[p].content_type === "image_asset_pointer" || parts[p].asset_pointer) {
-                    var imgName = (parts[p].metadata && parts[p].metadata.dalle && parts[p].metadata.dalle.prompt)
-                      ? "DALL-E: " + parts[p].metadata.dalle.prompt : "image";
-                    textParts.push("[\uD83D\uDDBC " + imgName + "]");
-                  }
-                }
-              }
-              return textParts.join("\n");
-            }
-
-            function extractNodeRole(node) {
-              return (node.message && node.message.author && node.message.author.role) || "unknown";
-            }
-
-            function extractNodeModel(node) {
-              return (node.message && node.message.metadata && node.message.metadata.model_slug) || null;
-            }
-
-            function extractNodeTime(node) {
-              return (node.message && node.message.create_time) || null;
-            }
-
-            var current = rootId;
-            var visited = {};
-            var safety = 0;
-
-            while (current && safety < 50000) {
-              safety++;
-              if (visited[current]) break;
-              visited[current] = true;
-              var node = detail.mapping[current];
-              if (!node) break;
-
-              if (node.message && node.message.content) {
-                var text = extractNodeText(node);
-                if (text.trim() !== "") {
-                  var msgObj = {
-                    role: extractNodeRole(node),
-                    content: text,
-                    timestamp: extractNodeTime(node),
-                    model: extractNodeModel(node)
-                  };
-
-                  if (node.parent && detail.mapping[node.parent]) {
-                    var parentNode = detail.mapping[node.parent];
-                    if (parentNode.children && parentNode.children.length > 1) {
-                      var alts = [];
-                      for (var ci = 0; ci < parentNode.children.length; ci++) {
-                        var sibId = parentNode.children[ci];
-                        if (sibId === current) continue;
-                        var sib = detail.mapping[sibId];
-                        if (sib && sib.message && sib.message.content) {
-                          var sibText = extractNodeText(sib);
-                          if (sibText.trim()) {
-                            alts.push({
-                              content: sibText,
-                              role: extractNodeRole(sib),
-                              timestamp: extractNodeTime(sib),
-                              model: extractNodeModel(sib)
-                            });
-                          }
-                        }
-                      }
-                      if (alts.length > 0) {
-                        msgObj.alternatives = alts;
-                        hasBranches = true;
-                      }
-                    }
-                  }
-
-                  messages.push(msgObj);
-                }
-              }
-
-              if (node.children && node.children.length > 0) {
-                current = node.children[node.children.length - 1];
-              } else {
-                break;
-              }
+          // Process each conversation in batch
+          for (var bj = 0; bj < batchArr.length; bj++) {
+            try {
+              var detail = batchArr[bj];
+              var detailId = detail.conversation_id || detail.id;
+              var listItem = listLookup[detailId] || batchItems[bj];
+              var processed = processConversationDetail(detail, listItem);
+              fullExport.conversations.push(processed);
+              successCount++;
+            } catch (procErr) {
+              var errTitle = (batchItems[bj] && batchItems[bj].title) || "Unknown";
+              log("Error processing: " + errTitle + " \u2014 " + procErr.message, "error");
+              errorCount++;
+              fullExport.conversations.push({
+                id: batchIds[bj],
+                title: errTitle,
+                error: procErr.message
+              });
             }
           }
 
-          fullExport.conversations.push({
-            id: c.id,
-            title: title,
-            create_time: c.create_time,
-            update_time: c.update_time,
-            model: detail.default_model_slug || detail.model || null,
-            project: c._project || null,
-            project_id: c._project_id || null,
-            has_branches: hasBranches,
-            message_count: messages.length,
-            messages: messages
-          });
+          // Update UI after each batch
+          var completed = successCount + errorCount;
+          var lastTitle = batchItems[batchItems.length - 1].title || "Untitled";
+          updateDlUI(completed, filtered.length, lastTitle, startTime);
 
-          successCount++;
-          if (i % 25 === 0 && i > 0) {
-            log("Progress: " + (i + 1) + "/" + filtered.length);
+          if (completed % 100 === 0 || completed === filtered.length) {
+            log("Progress: " + completed + "/" + filtered.length);
           }
 
-        } catch (err) {
-          log("Error: " + title + " \u2014 " + err.message, "error");
-          errorCount++;
-          fullExport.conversations.push({id: c.id, title: title, error: err.message});
-          var dlTitle = document.getElementById("g2c-dl-title");
-          if (dlTitle) dlTitle.textContent = "Error: " + err.message;
+          batchIndex += BATCH_SIZE;
+
+          // Small delay between batches to be respectful
+          await new Promise(function(r) { setTimeout(r, 500); });
+
+        } catch (batchErr) {
+          log("Batch error: " + batchErr.message + ", falling back\u2026", "error");
+          useBatch = false;
+          break;
         }
+      }
 
-        await new Promise(function(r) { setTimeout(r, 1000); });
+      // ---- FALLBACK: INDIVIDUAL DOWNLOADS ----
+      if (!useBatch) {
+        if (dlMode) dlMode.textContent = "\uD83D\uDC22 Individual mode";
+        log("Switching to individual downloads\u2026");
+
+        // Start from where batch left off
+        var startFrom = successCount + errorCount;
+        for (var i = startFrom; i < filtered.length; i++) {
+          var c = filtered[i];
+          var title = c.title || "Untitled";
+
+          updateDlUI(i + 1, filtered.length, title, startTime);
+
+          try {
+            var convoResp = await downloadSingle(c.id, token);
+
+            if (convoResp.status === 429) {
+              log("Rate limited, waiting 30s\u2026", "error");
+              var dlTitle = document.getElementById("g2c-dl-title");
+              var dlRemaining = document.getElementById("g2c-dl-remaining");
+              if (dlTitle) dlTitle.textContent = "Rate limited \u2014 waiting 30s\u2026";
+              if (dlRemaining) dlRemaining.textContent = "Will resume automatically";
+              await new Promise(function(r) { setTimeout(r, 30000); });
+              i--;
+              continue;
+            }
+
+            if (convoResp.status !== 200) {
+              log("Skipped: " + title + " (HTTP " + convoResp.status + ")", "error");
+              errorCount++;
+              fullExport.conversations.push({id: c.id, title: title, error: "HTTP " + convoResp.status});
+              continue;
+            }
+
+            var detail = await convoResp.json();
+            var processed = processConversationDetail(detail, c);
+            fullExport.conversations.push(processed);
+            successCount++;
+
+            if (i % 25 === 0 && i > 0) {
+              log("Progress: " + (i + 1) + "/" + filtered.length);
+            }
+
+          } catch (err) {
+            log("Error: " + title + " \u2014 " + err.message, "error");
+            errorCount++;
+            fullExport.conversations.push({id: c.id, title: title, error: err.message});
+          }
+
+          await new Promise(function(r) { setTimeout(r, 1000); });
+        }
       }
 
       var json = JSON.stringify(fullExport, null, 2);
@@ -978,14 +1116,28 @@
       downloadFile(json, "chatgpt_all_conversations.json", "application/json");
       log("DONE! " + successCount + " conversations, " + errorCount + " errors, ~" + sizeMB + " MB", "success");
 
+      // Collect model breakdown from export
+      var modelBreakdown = {};
+      for (var mi = 0; mi < fullExport.conversations.length; mi++) {
+        var cm = fullExport.conversations[mi].model || "unknown";
+        modelBreakdown[cm] = (modelBreakdown[cm] || 0) + 1;
+      }
+      var modelSummary = Object.keys(modelBreakdown).sort(function(a, b) {
+        return modelBreakdown[b] - modelBreakdown[a];
+      }).map(function(k) { return k + " (" + modelBreakdown[k] + ")"; }).join(", ");
+
       // Show completion screen (State 5)
       var filterPanel = document.getElementById("g2c-filter-panel");
       if (filterPanel) {
+        var elapsed = Math.round((Date.now() - startTime) / 1000);
+        var elapsedStr = elapsed < 60 ? elapsed + "s" : Math.round(elapsed / 60) + "m " + (elapsed % 60) + "s";
+
         filterPanel.innerHTML = '\
           <div class="g2c-complete">\
             <div class="g2c-complete-icon">\u2705</div>\
             <div class="g2c-complete-title">Export Complete!</div>\
-            <div class="g2c-complete-sub">' + successCount + ' conversations \u00B7 ' + sizeMB + ' MB</div>\
+            <div class="g2c-complete-sub">' + successCount + ' conversations \u00B7 ' + sizeMB + ' MB \u00B7 ' + elapsedStr + '</div>\
+            <div class="g2c-complete-models">' + modelSummary + '</div>\
           </div>\
           <div class="g2c-whatsnext">\
             <div class="g2c-whatsnext-title">What\u2019s next?</div>\
