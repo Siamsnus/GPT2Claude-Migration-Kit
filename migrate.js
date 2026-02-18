@@ -811,7 +811,6 @@
 
         filtered.push(c);
       }
-      }
       return filtered;
     } catch (err) {
       log("Filter error: " + err.message, "error");
