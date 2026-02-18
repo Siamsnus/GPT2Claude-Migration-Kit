@@ -1,4 +1,4 @@
-// GPT2Claude Migration Kit v2.2
+// GPT2Claude Migration Kit v2.3
 // https://github.com/Siamsnus/GPT2Claude-Migration-Kit
 // Exports ChatGPT memories, conversations, and instructions
 // No data leaves your browser - everything runs locally
@@ -122,7 +122,7 @@
     <div class="g2c-header g2c-drag-handle">\
       <div>\
         <div class="g2c-title"><span class="gpt">GPT</span><span class="arrow">\u2192</span><span class="claude">Claude</span></div>\
-        <div class="g2c-version">Migration Kit v2.2</div>\
+        <div class="g2c-version">Migration Kit v2.3</div>\
       </div>\
       <button class="g2c-close" id="g2c-close">\u00D7</button>\
     </div>\
@@ -317,7 +317,7 @@
       var memories = data.memories || data.results || data;
       var md = "# ChatGPT Memory Export\n";
       md += "# Exported: " + new Date().toISOString() + "\n";
-      md += "# Tool: GPT2Claude Migration Kit v2.2\n\n";
+      md += "# Tool: GPT2Claude Migration Kit v2.3\n\n";
 
       var count = 0;
       if (Array.isArray(memories)) {
@@ -1138,7 +1138,7 @@
 
       var fullExport = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.2",
+        tool: "GPT2Claude Migration Kit v2.3",
         format_version: 3,
         total_conversations: filtered.length,
         conversations: []
@@ -1372,7 +1372,7 @@
 
       var result = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.2",
+        tool: "GPT2Claude Migration Kit v2.3",
         data: {}
       };
 

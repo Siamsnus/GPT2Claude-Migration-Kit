@@ -5,14 +5,24 @@ All notable changes to the GPT→Claude Migration Kit.
 ## [2.3.0] — 2026-02-18
 
 ### Fixed
-- **Projects export** — completely rewritten project discovery. Old `/backend-api/projects` endpoint was removed by OpenAI (404). Now discovers projects via sidebar DOM scraping and fetches conversations via `/backend-api/gizmos/{project-id}/conversations` with cursor-based pagination. Reported via community feedback.
-- **Deduplication** — project conversations are deduplicated against main scan by conversation ID, preventing duplicates in exports.
+- **Project conversations excluded with limit** — when using "Max conversations" filter, project conversations were silently excluded. Root cause: limit counter didn't distinguish project vs main conversations. Project conversations now bypass the limit entirely — `limit=5` exports 5 main + all project conversations.
+- **Stray brace syntax error** — extra closing brace in `getFilteredConvos()` caused the function to crash silently, falling back to unfiltered results that were then capped by the download loop.
+- **Deduplication losing project metadata** — when a project conversation also appeared in the main `/backend-api/conversations` list, the dedup logic skipped it without tagging the existing entry with project info. Now uses index-based lookup to tag duplicates in-place (`existingIdx` stores array indices instead of booleans).
 
 ### Added
-- **Source filter** — when projects are detected, filter panel shows a "Source" section with checkboxes for `💬 Main conversations` and `📁 Project Name`, allowing export of only project conversations or everything together.
-- **Scan summary breakdown** — shows "3,360 main + 1 from 1 project" when projects are found.
-- **Smart filenames** — export filename adapts based on content: `chatgpt_all_conversations.json` for everything, `chatgpt_project_investing.json` for a single project, `chatgpt_projects.json` for multiple projects only.
+- **Multi-method project discovery** — replaced fragile DOM-only scraping with a 3-method cascade:
+  1. **Conversation item inspection** — checks `gizmo_id` field on scanned conversations for `g-p-*` project IDs
+  2. **API discovery** — tries `GET /backend-api/gizmos/discovery/mine` for project listing
+  3. **DOM scraping (fallback)** — original sidebar link approach as last resort
+- **Project name resolution** — projects discovered without names (via gizmo_id) are resolved by fetching `GET /backend-api/gizmos/{id}` for display name.
+- **Diagnostic logging** — `Sample gizmo:` line shows what project-related fields exist in conversation data, helping debug project discovery issues.
 - **Era presets** — one-click date range buttons (GPT-3.5 / GPT-4 / GPT-4o / GPT-5+) based on actual model launch dates. Lets users quickly export conversations from a specific era without knowing exact dates.
+- **Source filter** — when projects are detected, filter panel shows a "Source" section with checkboxes for `💬 Main conversations` and `📁 Project Name`.
+- **Scan summary breakdown** — shows "3,360 main + 1 from 1 project" when projects are found.
+- **Smart filenames** — export filename adapts: `chatgpt_all_conversations.json` for mixed, `chatgpt_project_investing.json` for single project, `chatgpt_projects.json` for multiple projects only.
+
+### Changed
+- Project scan log now shows `"Project Investing: 1 new, 0 tagged"` distinguishing genuinely new conversations from duplicates that were tagged with project metadata.
 
 ## [2.2.0] — 2026-02-16
 
