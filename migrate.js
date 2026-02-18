@@ -945,8 +945,30 @@
   // ========== CONVERSATION PROCESSING HELPERS ==========
   function extractNodeText(node) {
     if (!node || !node.message || !node.message.content) return "";
-    var parts = node.message.content.parts;
-    if (!Array.isArray(parts)) return JSON.stringify(node.message.content);
+    var content = node.message.content;
+
+    // Handle special content types at the top level
+    var ct = content.content_type;
+    if (ct === "model_editable_context") return ""; // system memory, skip
+    if (ct === "thoughts") {
+      // Reasoning model thinking block — OpenAI hides actual CoT
+      return "[thinking]";
+    }
+    if (ct === "reasoning_recap") {
+      // "Thought for a few seconds" etc
+      return "[" + (content.content || "Thinking...") + "]";
+    }
+    if (ct === "code" || ct === "execution_output") {
+      var lang = content.language || "";
+      var codeText = content.text || "";
+      if (lang === "unknown" && codeText.indexOf("search(") === 0) {
+        return "[\uD83D\uDD0D " + codeText + "]";
+      }
+      return "```" + lang + "\n" + codeText + "\n```";
+    }
+
+    var parts = content.parts;
+    if (!Array.isArray(parts)) return JSON.stringify(content);
     var textParts = [];
     for (var p = 0; p < parts.length; p++) {
       if (typeof parts[p] === "string") {

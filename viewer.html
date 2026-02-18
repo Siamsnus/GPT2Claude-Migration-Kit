@@ -86,6 +86,8 @@
   .message.assistant .msg-bubble { background: var(--ai-bubble); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
   .message.system .msg-bubble { background: rgba(126,184,160,0.06); border: 1px solid rgba(126,184,160,0.15); font-style: italic; color: var(--text-dim); font-size: 0.82rem; }
   .message.tool .msg-bubble { background: var(--surface); border: 1px solid var(--border); font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); }
+  .thinking-indicator { text-align: center; padding: 6px 0; font-size: 0.78rem; color: var(--text-faint); font-style: italic; }
+  .tool-indicator { text-align: center; padding: 6px 14px; margin: 4px auto; font-size: 0.75rem; color: var(--text-faint); font-family: var(--mono); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; max-width: 500px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .msg-time { font-size: 0.68rem; color: var(--text-faint); margin-top: 4px; font-family: var(--mono); }
   .message.user .msg-time { text-align: right; }
   .msg-model { display: inline-block; font-size: 0.65rem; color: var(--gpt); background: var(--gpt-dim); padding: 1px 6px; border-radius: 4px; font-family: var(--mono); margin-left: 8px; vertical-align: middle; }
@@ -259,7 +261,7 @@
       <button class="add-more-btn" onclick="document.getElementById('file-input-more').click()">+ Load more files</button>
       <input type="file" id="file-input-more" accept=".json,.md,.txt" multiple style="display:none">
     </div>
-    <div class="viewer-footer" id="viewer-footer">Viewer v2.1</div>
+    <div class="viewer-footer" id="viewer-footer">Viewer v2.3</div>
   </div>
 
   <!-- MAIN CONTENT (hidden until file loaded) -->
@@ -563,7 +565,7 @@ function processConversations(content) {
 
   // Update version footer
   if (data.tool) {
-    document.getElementById("viewer-footer").textContent = "Viewer v2.1 · Export: " + data.tool;
+    document.getElementById("viewer-footer").textContent = "Viewer v2.3 · Export: " + data.tool;
   }
 
   renderConversationList();
@@ -810,8 +812,21 @@ function flattenMessagesWithBranches(mapping) {
 
   // Helper: extract text from node
   function nodeText(node) {
-    if (!node || !node.message || !node.message.content || !node.message.content.parts) return "";
-    return node.message.content.parts.map(function(p) {
+    if (!node || !node.message || !node.message.content) return "";
+    var content = node.message.content;
+    // Handle special content types
+    var ct = content.content_type;
+    if (ct === "model_editable_context") return "";
+    if (ct === "thoughts") return "[thinking]";
+    if (ct === "reasoning_recap") return "[" + (content.content || "Thinking...") + "]";
+    if ((ct === "code" || ct === "execution_output") && content.text) {
+      if ((content.language === "unknown" || !content.language) && content.text.indexOf("search(") === 0) {
+        return "[🔍 " + content.text + "]";
+      }
+      return "```" + (content.language || "") + "\n" + content.text + "\n```";
+    }
+    if (!content.parts) return "";
+    return content.parts.map(function(p) {
       if (typeof p === "string") return p;
       if (p && p.text) return p.text;
       if (p && (p.content_type === "image_asset_pointer" || p.asset_pointer)) {
@@ -992,6 +1007,29 @@ function openConversation(id) {
     var time = formatDateTime(m.timestamp);
     var hasAlts = m.alternatives && m.alternatives.length > 0;
     var totalAlts = hasAlts ? m.alternatives.length + 1 : 0;
+    var msgText = m.text || "";
+
+    // Special rendering for thinking/reasoning/tool messages
+    var isThinking = msgText === "[thinking]";
+    var isRecap = msgText.indexOf("[Thought ") === 0 || msgText.indexOf("[Thinking") === 0;
+    var isSearch = msgText.indexOf("[🔍 ") === 0;
+
+    // Skip standalone thinking markers — they'll merge with the recap below
+    if (isThinking) continue;
+
+    // Render reasoning recap as a subtle inline indicator
+    if (isRecap) {
+      var recapText = msgText.replace(/^\[/, '').replace(/\]$/, '');
+      html += '<div class="thinking-indicator">💭 ' + escHtml(recapText) + '</div>';
+      continue;
+    }
+
+    // Render search/tool use as a subtle indicator
+    if (isSearch) {
+      var searchText = msgText.replace(/^\[🔍 /, '').replace(/\]$/, '');
+      html += '<div class="tool-indicator">🔍 ' + escHtml(searchText) + '</div>';
+      continue;
+    }
 
     if (hasAlts && firstBranchIdx === -1) firstBranchIdx = i;
 
@@ -1266,6 +1304,10 @@ function renderMarkdown(text) {
 
 function isMetadataMessage(m) {
   var t = m.text || m.content || "";
+  // Keep thinking/reasoning markers visible
+  if (t === "[thinking]") return false;
+  if (t.indexOf("[Thought ") === 0 || t.indexOf("[Thinking") === 0) return false;
+  if (t.indexOf("[🔍 ") === 0) return false; // search queries
   // Filter out system metadata that ChatGPT hides
   if (t.trim().charAt(0) === '{') {
     try {

@@ -26,7 +26,21 @@ All notable changes to the GPT→Claude Migration Kit.
   3. Download failed items individually, then resume batch mode
   4. Only permanent fallback after 3 consecutive batch group failures
   - Mode indicator shows current state: ⚡ Batch mode / Retrying / Splitting / Resumed / 🐢 Individual mode
-- **Adaptive scan speed** — tries `limit=200` for conversation list API (17 calls vs 34 for 3,360 conversations). Falls back to `limit=100` if API rejects or caps the response. (`limit=500` tested and rejected with HTTP 422.)
+- **Adaptive scan speed** — tested `limit=200` and `limit=500` for conversation list API; both return HTTP 422. OpenAI hard-caps at 100. Kept at 100.
+- **Export robustness** — `extractNodeText` now handles special content types from reasoning models and tool use:
+  - `thoughts` (empty CoT from o1/o3/o4/gpt-5-thinking) → `[thinking]` marker
+  - `reasoning_recap` → `[Thought for a few seconds]` text
+  - `model_editable_context` → silently skipped (system memory, empty)
+  - `code` with `search()` → `[🔍 search("query")]` marker
+  - `code` with language → proper fenced code block
+  - `execution_output` → same handling as code
+- **Viewer: smart content rendering** — thinking indicators, reasoning recaps, and search queries now render as styled inline elements instead of being hidden or showing raw JSON:
+  - 💭 "Thought for a few seconds" → subtle italic indicator between messages
+  - 🔍 search queries → compact monospace pill
+  - `[thinking]` markers → silently merged with recap
+  - Raw ChatGPT exports (with `mapping`) get the same treatment via updated `nodeText`
+- **Viewer: smarter metadata filter** — `isMetadataMessage` now preserves thinking/reasoning/search markers while still hiding `model_editable_context` and other system metadata.
+- **Viewer version** bumped to v2.3.
 
 ### Changed
 - **Model filter hidden during scan** — when all models show as "unknown" (OpenAI removed `default_model_slug` from list API), the model filter section is hidden instead of showing a useless "unknown ✓ 3361" checkbox. Model breakdown still appears on completion screen after download.
