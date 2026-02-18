@@ -435,54 +435,83 @@
 
       log("Total conversations: " + scannedConvos.length);
 
-      // Try to fetch project conversations too
+      // Discover and fetch project conversations via sidebar DOM scraping
       try {
         log("Checking for projects...");
         var statusEl = document.getElementById("g2c-scan-status");
         if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Checking projects\u2026';
-        var projResp = await fetch(
-          "https://chatgpt.com/backend-api/projects?offset=0&limit=100",
-          {credentials: "include", headers: headers}
-        );
-        if (projResp.status === 200) {
-          var projData = await projResp.json();
-          var projects = projData.items || projData.projects || projData || [];
-          if (Array.isArray(projects) && projects.length > 0) {
-            log("Found " + projects.length + " projects");
-            for (var pi = 0; pi < projects.length; pi++) {
-              var proj = projects[pi];
-              var projName = proj.title || proj.name || ("Project " + (pi + 1));
-              var projId = proj.id || proj.project_id;
-              log("Fetching project: " + projName);
-              var projOffset = 0;
-              while (true) {
-                var projConvoResp = await fetch(
-                  "https://chatgpt.com/backend-api/conversations?project_id=" + projId + "&offset=" + projOffset + "&limit=100&order=updated",
-                  {credentials: "include", headers: headers}
-                );
-                if (projConvoResp.status !== 200) break;
-                var projConvoData = await projConvoResp.json();
-                var projItems = projConvoData.items || [];
-                for (var pj = 0; pj < projItems.length; pj++) {
-                  projItems[pj]._project = projName;
-                  projItems[pj]._project_id = projId;
-                  scannedConvos.push(projItems[pj]);
-                }
-                var countEl = document.getElementById("g2c-scan-count");
-                if (countEl) countEl.textContent = scannedConvos.length.toLocaleString();
-                var statusEl = document.getElementById("g2c-scan-status");
-                if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Scanning project: ' + projName + '\u2026';
-                projOffset += projItems.length;
-                if (projItems.length < 100) break;
-                await new Promise(function(r) { setTimeout(r, 500); });
-              }
-            }
-            log("Total with projects: " + scannedConvos.length);
-          } else {
-            log("No projects found");
+
+        // Scrape sidebar for project links (g-p- prefix = project gizmo)
+        var projLinks = document.querySelectorAll('a[href*="/g/g-p-"]');
+        var discoveredProjects = {};
+        for (var pl = 0; pl < projLinks.length; pl++) {
+          var href = projLinks[pl].getAttribute("href") || "";
+          var idMatch = href.match(/g-p-[a-f0-9]+/);
+          if (!idMatch) continue;
+          var projId = idMatch[0];
+          if (discoveredProjects[projId]) continue;
+          // Extract project name from URL slug or link text
+          var slugMatch = href.match(/g-p-[a-f0-9]+-([^/]+)/);
+          var linkText = projLinks[pl].textContent.trim();
+          var projName = linkText || (slugMatch ? slugMatch[1].replace(/-/g, " ") : "Project");
+          // Skip if it looks like a conversation title inside a project (has /c/ in URL)
+          if (href.indexOf("/c/") > -1) continue;
+          discoveredProjects[projId] = projName;
+        }
+
+        var projIds = Object.keys(discoveredProjects);
+        if (projIds.length > 0) {
+          log("Found " + projIds.length + " project(s) in sidebar");
+
+          // Build set of existing conversation IDs for deduplication
+          var existingIds = {};
+          for (var ei = 0; ei < scannedConvos.length; ei++) {
+            existingIds[scannedConvos[ei].id] = true;
           }
+
+          for (var pi = 0; pi < projIds.length; pi++) {
+            var projId = projIds[pi];
+            var projName = discoveredProjects[projId];
+            log("Fetching project: " + projName);
+            var statusEl = document.getElementById("g2c-scan-status");
+            if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Scanning project: ' + projName + '\u2026';
+
+            var cursor = 0;
+            var projConvoCount = 0;
+            while (true) {
+              var projConvoResp = await fetch(
+                "https://chatgpt.com/backend-api/gizmos/" + projId + "/conversations?cursor=" + cursor,
+                {credentials: "include", headers: headers}
+              );
+              if (projConvoResp.status !== 200) {
+                log("Project " + projName + ": HTTP " + projConvoResp.status, "error");
+                break;
+              }
+              var projConvoData = await projConvoResp.json();
+              var projItems = projConvoData.items || [];
+              for (var pj = 0; pj < projItems.length; pj++) {
+                projItems[pj]._project = projName;
+                projItems[pj]._project_id = projId;
+                // Only add if not already in main scan (deduplicate)
+                if (!existingIds[projItems[pj].id]) {
+                  scannedConvos.push(projItems[pj]);
+                  existingIds[projItems[pj].id] = true;
+                  projConvoCount++;
+                }
+              }
+              var countEl = document.getElementById("g2c-scan-count");
+              if (countEl) countEl.textContent = scannedConvos.length.toLocaleString();
+
+              // Cursor-based pagination: null cursor means no more pages
+              if (projConvoData.cursor === null || projConvoData.cursor === undefined || projItems.length === 0) break;
+              cursor = projConvoData.cursor;
+              await new Promise(function(r) { setTimeout(r, 500); });
+            }
+            log("Project " + projName + ": " + projConvoCount + " unique conversation(s)");
+          }
+          log("Total with projects: " + scannedConvos.length);
         } else {
-          log("Projects not available (HTTP " + projResp.status + ")");
+          log("No projects found");
         }
       } catch (projErr) {
         log("Projects check failed: " + projErr.message + " (continuing without)");
@@ -512,6 +541,7 @@
     var models = {};
     var oldest = Infinity;
     var newest = 0;
+    var sources = {}; // Track main vs project conversations
     for (var i = 0; i < scannedConvos.length; i++) {
       var c = scannedConvos[i];
       var m = getConvoModel(c);
@@ -519,6 +549,9 @@
       var t = getConvoTime(c);
       if (t > 0 && t < oldest) oldest = t;
       if (t > 0 && t > newest) newest = t;
+      // Track source
+      var src = c._project || "Main conversations";
+      sources[src] = (sources[src] || 0) + 1;
     }
     var modelKeys = Object.keys(models).sort(function(a, b) { return models[b] - models[a]; });
 
@@ -541,14 +574,42 @@
       modelCheckboxes += '<label class="g2c-model-row"><input type="checkbox" checked data-model="' + mk + '"> ' + mk + '<span class="cnt">' + models[mk] + '</span></label>';
     }
 
+    // Build source/project checkboxes
+    var sourceKeys = Object.keys(sources).sort(function(a, b) {
+      if (a === "Main conversations") return -1;
+      if (b === "Main conversations") return 1;
+      return sources[b] - sources[a];
+    });
+    var sourceCheckboxes = "";
+    var hasProjects = sourceKeys.length > 1;
+    for (var si = 0; si < sourceKeys.length; si++) {
+      var sk = sourceKeys[si];
+      var icon = sk === "Main conversations" ? "\uD83D\uDCAC" : "\uD83D\uDCC1";
+      sourceCheckboxes += '<label class="g2c-model-row"><input type="checkbox" checked data-source="' + sk + '"> ' + icon + ' ' + sk + '<span class="cnt">' + sources[sk] + '</span></label>';
+    }
+
+    // Scan summary — show project breakdown if applicable
+    var projCount = sourceKeys.length - 1;
+    var projConvoCount = scannedConvos.filter(function(c) { return c._project; }).length;
+    var mainCount = scannedConvos.length - projConvoCount;
+    var scanSummaryText = scannedConvos.length.toLocaleString() + '</span>' +
+      '<span style="font-size:12px;color:#888;"> conversations scanned</span>';
+    if (projCount > 0) {
+      scanSummaryText += '<div style="font-size:11px;color:#7eb8a0;margin-top:4px;">' +
+        mainCount.toLocaleString() + ' main + ' + projConvoCount + ' from ' + projCount + ' project' + (projCount > 1 ? 's' : '') + '</div>';
+    }
     var scanSummary = '<div style="text-align:center;margin-bottom:14px;">' +
-      '<span style="font-size:28px;font-weight:800;color:#7eb8a0;">' + scannedConvos.length.toLocaleString() + '</span>' +
-      '<span style="font-size:12px;color:#888;"> conversations scanned</span>' +
+      '<span style="font-size:28px;font-weight:800;color:#7eb8a0;">' + scanSummaryText +
       '</div>';
 
     var filterHtml = '\
       <div class="g2c-filter-panel" id="g2c-filter-panel">\
         ' + scanSummary + '\
+        ' + (hasProjects ? '\
+        <div class="g2c-filter-section">\
+          <div class="g2c-filter-label">Source</div>\
+          <div class="g2c-filter-models" id="g2c-filter-sources">' + sourceCheckboxes + '</div>\
+        </div>' : '') + '\
         <div class="g2c-filter-section">\
           <div class="g2c-filter-label">Models</div>\
           <div class="g2c-filter-models" id="g2c-filter-models">' + modelCheckboxes + '</div>\
@@ -620,7 +681,7 @@
       if (fileInput) fileInput.click();
     });
 
-    var filterInputs = document.querySelectorAll("#g2c-filter-models input, #g2c-date-from, #g2c-date-to, #g2c-limit");
+    var filterInputs = document.querySelectorAll("#g2c-filter-models input, #g2c-filter-sources input, #g2c-date-from, #g2c-date-to, #g2c-limit");
     for (var fi = 0; fi < filterInputs.length; fi++) {
       filterInputs[fi].addEventListener("change", updateFilterSummary);
     }
@@ -641,8 +702,8 @@
 
     safeAddEvent("g2c-btn-download", "click", startFilteredDownload);
 
-    // Ensure all model checkboxes are programmatically checked (defensive)
-    var allBoxes = document.querySelectorAll("#g2c-filter-models input");
+    // Ensure all model and source checkboxes are programmatically checked (defensive)
+    var allBoxes = document.querySelectorAll("#g2c-filter-models input, #g2c-filter-sources input");
     for (var bi = 0; bi < allBoxes.length; bi++) allBoxes[bi].checked = true;
 
     // Force-recalculate summary after DOM is fully wired
@@ -667,6 +728,14 @@
         if (boxes[i].checked) selectedModels[boxes[i].getAttribute("data-model")] = true;
       }
 
+      // Source/project filter
+      var selectedSources = {};
+      var sourceBoxes = document.querySelectorAll("#g2c-filter-sources input");
+      for (var si = 0; si < sourceBoxes.length; si++) {
+        if (sourceBoxes[si].checked) selectedSources[sourceBoxes[si].getAttribute("data-source")] = true;
+      }
+      var hasSourceFilter = sourceBoxes.length > 0 && Object.keys(selectedSources).length > 0;
+
       // If no models selected, return all (fail-open)
       var hasModelFilter = Object.keys(selectedModels).length > 0;
 
@@ -684,6 +753,13 @@
       var filtered = [];
       for (var i = 0; i < scannedConvos.length; i++) {
         var c = scannedConvos[i];
+
+        // Source filter
+        if (hasSourceFilter) {
+          var src = c._project || "Main conversations";
+          if (!selectedSources[src]) continue;
+        }
+
         var model = getConvoModel(c);
         if (hasModelFilter && !selectedModels[model]) continue;
 
@@ -1113,7 +1189,25 @@
       var json = JSON.stringify(fullExport, null, 2);
       var sizeMB = (json.length / 1024 / 1024).toFixed(1);
 
-      downloadFile(json, "chatgpt_all_conversations.json", "application/json");
+      // Smart filename based on what was exported
+      var exportFilename = "chatgpt_all_conversations.json";
+      var projectNames = {};
+      var hasMain = false;
+      for (var fi = 0; fi < fullExport.conversations.length; fi++) {
+        if (fullExport.conversations[fi].project) {
+          projectNames[fullExport.conversations[fi].project] = true;
+        } else {
+          hasMain = true;
+        }
+      }
+      var projNameList = Object.keys(projectNames);
+      if (!hasMain && projNameList.length === 1) {
+        // Only one project exported
+        exportFilename = "chatgpt_project_" + projNameList[0].toLowerCase().replace(/[^a-z0-9]+/g, "_") + ".json";
+      } else if (!hasMain && projNameList.length > 1) {
+        exportFilename = "chatgpt_projects.json";
+      }
+      downloadFile(json, exportFilename, "application/json");
       log("DONE! " + successCount + " conversations, " + errorCount + " errors, ~" + sizeMB + " MB", "success");
 
       // Collect model breakdown from export

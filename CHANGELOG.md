@@ -2,33 +2,31 @@
 
 All notable changes to the GPT→Claude Migration Kit.
 
+## [2.3.0] — 2026-02-18
+
+### Fixed
+- **Projects export** — completely rewritten project discovery. Old `/backend-api/projects` endpoint was removed by OpenAI (404). Now discovers projects via sidebar DOM scraping and fetches conversations via `/backend-api/gizmos/{project-id}/conversations` with cursor-based pagination. Reported via community feedback.
+- **Deduplication** — project conversations are deduplicated against main scan by conversation ID, preventing duplicates in exports.
+
+### Added
+- **Source filter** — when projects are detected, filter panel shows a "Source" section with checkboxes for `💬 Main conversations` and `📁 Project Name`, allowing export of only project conversations or everything together.
+- **Scan summary breakdown** — shows "3,360 main + 1 from 1 project" when projects are found.
+- **Smart filenames** — export filename adapts based on content: `chatgpt_all_conversations.json` for everything, `chatgpt_project_investing.json` for a single project, `chatgpt_projects.json` for multiple projects only.
+
 ## [2.2.0] — 2026-02-16
 
 ### Added
-- **⚡ Batch download engine** — uses undocumented `/conversations/batch` POST endpoint to download 10 conversations per request instead of one-by-one. Reduces a 3,357 conversation export from ~1.4 hours to ~6 minutes. Automatically falls back to individual downloads if batch endpoint is unavailable.
-- **Model breakdown on completion** — completion screen now shows model distribution (e.g. "gpt-4o (1200), gpt-5-2 (800)") since models are extracted from message metadata during download
-- **Elapsed time on completion** — shows total export duration
-- **Batch/individual mode indicator** — shows ⚡ or 🐢 during download so user knows which mode is active
-- **Scan hero UI** — big animated counter (42px, pulsing), bouncing dots, "conversations found" label, reassurance text during scan
-- **Download progress hero** — clean counter showing "87 / 154", current conversation title, progress bar with percentage, real-time "~X minutes remaining" estimate
-- **Completion screen** — ✅ checkmark, "Export Complete!" with conversation count and file size, "What's next?" card linking to Conversation Viewer and import guide
-- **Copy Log button** — copies full log text to clipboard (with execCommand fallback for older browsers)
-- **Scan summary header** — filter panel now shows big green count of total conversations scanned
-
-### Fixed
-- **OpenAI API field changes** — `default_model_slug` removed from list API, timestamps changed from epoch numbers to ISO 8601 strings. Added `getConvoModel()` and `getConvoTime()` helpers that try multiple field names and handle both formats.
-- **`addEventListener` null crash** — after scan completes, projects returning 404 could cause `showFilterPanel()` to crash when wiring event listeners on elements not yet in the DOM. Added `safeAddEvent()` helper with null guards and warning logs.
-- **"0 conversations selected" bug** — filter now fails-open: returns all conversations if no model checkboxes found. Date filter skips conversations with no valid timestamp instead of filtering them out. Whole function wrapped in try/catch.
-- **Diagnostic logging** — first batch now logs `API fields:`, `Sample model:`, `Sample time:` to help debug future API changes
-- DOM insertion fallback — filter panel insertion now tries `progressEl.parentNode` first, falls back to `bodyEl.appendChild`
-- Button hiding now uses loop with null guards instead of direct access
-- All DOM updates in download progress use null guards to prevent crashes
+- **Batch download engine** — uses OpenAI's undocumented `POST /backend-api/conversations/batch` endpoint to download up to 10 conversations per API call, dramatically reducing export time.
+- **Automatic fallback** — if batch endpoint fails (HTTP 500/429), seamlessly falls back to individual downloads and continues.
+- **Visual batch status** — progress indicator shows whether batch or individual mode is active.
+- **Copy log button** — copies the full export log to clipboard for debugging.
+- **Completion screen** — shows model distribution breakdown, export stats, and links to viewer/import guide after export finishes.
 
 ### Changed
-- Scan counter uses `.toLocaleString()` for thousand separators
-- Scan status messages improved: "Still scanning — this takes a minute, all good"
-- Project scan messages use proper ellipsis character (…)
-- Model tags use updated pill styling with SF Mono font, centered layout with top border separator
+- Export time reduced from ~1.5 hours to ~40 minutes for large accounts (3,000+ conversations).
+- Time estimate formula updated for batch mode.
+- API field handling updated for OpenAI's switch from epoch timestamps to ISO 8601 strings.
+- `default_model_slug` removed from list API — model now extracted from message metadata during download.
 
 ## [2.1.0] — 2026-02-16
 
