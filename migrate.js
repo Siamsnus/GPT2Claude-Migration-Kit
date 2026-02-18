@@ -381,7 +381,7 @@
       scannedConvos = [];
       var offset = 0;
       var liveModels = {};
-      var scanLimit = 500; // Try large batches first, fall back if needed
+      var scanLimit = 200; // Try larger batches first, fall back if needed
 
       log("Scanning conversation list...");
 
@@ -762,16 +762,18 @@
     }
 
     // Wire up events using safeAddEvent (BUG FIX)
-    safeAddEvent("g2c-sel-all", "click", function() {
-      var boxes = document.querySelectorAll("#g2c-filter-models input");
-      for (var i = 0; i < boxes.length; i++) boxes[i].checked = true;
-      updateFilterSummary();
-    });
-    safeAddEvent("g2c-sel-none", "click", function() {
-      var boxes = document.querySelectorAll("#g2c-filter-models input");
-      for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
-      updateFilterSummary();
-    });
+    if (hasRealModels) {
+      safeAddEvent("g2c-sel-all", "click", function() {
+        var boxes = document.querySelectorAll("#g2c-filter-models input");
+        for (var i = 0; i < boxes.length; i++) boxes[i].checked = true;
+        updateFilterSummary();
+      });
+      safeAddEvent("g2c-sel-none", "click", function() {
+        var boxes = document.querySelectorAll("#g2c-filter-models input");
+        for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
+        updateFilterSummary();
+      });
+    }
 
     safeAddEvent("g2c-prev-drop", "click", function() {
       var fileInput = document.getElementById("g2c-prev-file");
