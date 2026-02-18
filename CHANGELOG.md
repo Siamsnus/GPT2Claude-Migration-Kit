@@ -23,7 +23,8 @@ All notable changes to the GPT→Claude Migration Kit.
 
 ### Changed
 - **Model filter hidden during scan** — when all models show as "unknown" (OpenAI removed `default_model_slug` from list API), the model filter section is hidden instead of showing a useless "unknown ✓ 3361" checkbox. Model breakdown still appears on completion screen after download.
-- **Time estimate improved** — formula updated from 1.0s to 1.5s per batch, with 1.3× multiplier for 1000+ conversation exports. Shows ~11 minutes for 3,361 conversations (was ~6 minutes, actual ~15-20 minutes).
+- **Time estimate improved** — formula calibrated from real-world data (29m 34s for 3,361 conversations). Uses 5s per batch of 10, giving ~28 minutes for a full export (was showing ~6 minutes).
+- **Completion screen model tags** — replaced cluttered comma-separated model list with clean pill-style tags. Shows top 5 models with counts, expandable "+N more" button reveals the rest.
 - Project scan log now shows `"Project Investing: 1 new, 0 tagged"` distinguishing genuinely new conversations from duplicates that were tagged with project metadata.
 
 ## [2.2.0] — 2026-02-16

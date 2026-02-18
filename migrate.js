@@ -46,6 +46,10 @@
     .g2c-complete-title { font-size: 18px; font-weight: 700; color: #7eb8a0; }\
     .g2c-complete-sub { font-size: 12px; color: #888; margin-top: 6px; }\
     .g2c-complete-models { font-size: 11px; color: #d4a574; margin-top: 6px; font-family: 'SF Mono', Consolas, monospace; }\
+.g2c-complete-models-wrap { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 12px; }\
+.g2c-models-extra { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; width: 100%; margin-top: 4px; }\
+.g2c-models-toggle { font-size: 10px; padding: 3px 10px; background: none; border: 1px dashed #333340; border-radius: 20px; color: #888; cursor: pointer; font-family: 'SF Mono', Consolas, monospace; }\
+.g2c-models-toggle:hover { border-color: #d4a574; color: #d4a574; }\
     .g2c-whatsnext { margin: 16px 0; padding: 14px; background: #141418; border: 1px solid #252530; border-radius: 10px; }\
     .g2c-whatsnext-title { font-size: 11px; color: #888; margin-bottom: 10px; font-weight: 600; }\
     .g2c-whatsnext-item { font-size: 12px; color: #ccc; line-height: 1.8; margin-bottom: 10px; }\
@@ -817,10 +821,9 @@
   }
 
   function estimateTime(count) {
-    // Real-world: ~1.5s per batch of 10 (0.5s delay + ~1s fetch/parse)
-    // Plus potential rate limits add significant time on large exports
-    var secs = Math.ceil(count / BATCH_SIZE) * 1.5;
-    if (count > 1000) secs *= 1.3; // large exports hit more rate limits
+    // Real-world calibration: 3361 convos = 29m34s = ~5.3s per batch of 10
+    // Using 5s per batch as conservative estimate
+    var secs = Math.ceil(count / BATCH_SIZE) * 5;
     if (secs < 60) return "~" + Math.max(Math.round(secs), 1) + " seconds";
     var mins = Math.round(secs / 60);
     if (mins < 60) return "~" + mins + " minutes";
@@ -1330,9 +1333,28 @@
         var cm = fullExport.conversations[mi].model || "unknown";
         modelBreakdown[cm] = (modelBreakdown[cm] || 0) + 1;
       }
-      var modelSummary = Object.keys(modelBreakdown).sort(function(a, b) {
+      var sortedModels = Object.keys(modelBreakdown).sort(function(a, b) {
         return modelBreakdown[b] - modelBreakdown[a];
-      }).map(function(k) { return k + " (" + modelBreakdown[k] + ")"; }).join(", ");
+      });
+
+      // Build model tags HTML — top 5 visible, rest collapsed
+      var TOP_N = 5;
+      var modelTagsHtml = '<div class="g2c-complete-models-wrap">';
+      for (var ti = 0; ti < Math.min(TOP_N, sortedModels.length); ti++) {
+        var mk = sortedModels[ti];
+        modelTagsHtml += '<span class="g2c-scan-tag">' + mk + ' <span style="opacity:0.6;">' + modelBreakdown[mk] + '</span></span>';
+      }
+      if (sortedModels.length > TOP_N) {
+        var moreCount = sortedModels.length - TOP_N;
+        modelTagsHtml += '<button class="g2c-models-toggle" id="g2c-models-toggle">+' + moreCount + ' more</button>';
+        modelTagsHtml += '<div class="g2c-models-extra" id="g2c-models-extra" style="display:none;">';
+        for (var ti = TOP_N; ti < sortedModels.length; ti++) {
+          var mk = sortedModels[ti];
+          modelTagsHtml += '<span class="g2c-scan-tag">' + mk + ' <span style="opacity:0.6;">' + modelBreakdown[mk] + '</span></span>';
+        }
+        modelTagsHtml += '</div>';
+      }
+      modelTagsHtml += '</div>';
 
       // Show completion screen (State 5)
       var filterPanel = document.getElementById("g2c-filter-panel");
@@ -1345,7 +1367,7 @@
             <div class="g2c-complete-icon">\u2705</div>\
             <div class="g2c-complete-title">Export Complete!</div>\
             <div class="g2c-complete-sub">' + successCount + ' conversations \u00B7 ' + sizeMB + ' MB \u00B7 ' + elapsedStr + '</div>\
-            <div class="g2c-complete-models">' + modelSummary + '</div>\
+            ' + modelTagsHtml + '\
           </div>\
           <div class="g2c-whatsnext">\
             <div class="g2c-whatsnext-title">What\u2019s next?</div>\
@@ -1358,6 +1380,19 @@
               <span style="color:#999;">Follow the <a href="https://siamsnus.github.io/GPT2Claude-Migration-Kit/#importing" target="_blank">import guide</a> to bring your history into Claude.</span>\
             </div>\
           </div>';
+
+        // Wire up "show more models" toggle
+        var modelsToggle = document.getElementById("g2c-models-toggle");
+        if (modelsToggle) {
+          modelsToggle.addEventListener("click", function() {
+            var extra = document.getElementById("g2c-models-extra");
+            if (extra) {
+              var showing = extra.style.display !== "none";
+              extra.style.display = showing ? "none" : "flex";
+              this.textContent = showing ? "+" + (sortedModels.length - TOP_N) + " more" : "show less";
+            }
+          });
+        }
       }
 
     } catch (err) {
