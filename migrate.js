@@ -381,7 +381,7 @@
       scannedConvos = [];
       var offset = 0;
       var liveModels = {};
-      var scanLimit = 200; // Try larger batches first, fall back if needed
+      var scanLimit = 100;
 
       log("Scanning conversation list...");
 
@@ -392,24 +392,11 @@
         );
 
         if (listResp.status !== 200) {
-          // If 500 limit failed on first request, try 100
-          if (offset === 0 && scanLimit > 100) {
-            log("Scan limit " + scanLimit + " rejected (HTTP " + listResp.status + "), trying 100...");
-            scanLimit = 100;
-            continue;
-          }
           throw new Error("Could not get conversations (HTTP " + listResp.status + ")");
         }
 
         var listData = await listResp.json();
         var items = listData.items || [];
-
-        // Detect if API capped our limit (asked 500, got exactly 100)
-        if (offset === 0 && scanLimit > 100 && items.length > 0 && items.length <= 100) {
-          log("API capped at " + items.length + ", using limit=100");
-          scanLimit = 100;
-        }
-
         log("Batch: " + items.length + " conversations (offset " + offset + ")");
 
         // Log first item's keys for diagnostics
