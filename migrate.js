@@ -981,7 +981,10 @@
         }
       }
     }
-    return textParts.join("\n").replace(/\uE200cite(\uE202turn\dsearch\d+)+\uE201/g, "");
+    return textParts.join("\n")
+      .replace(/\uE200cite(\uE202turn\dsearch\d+)+\uE201/g, "")
+      .replace(/\uE200image_group\uE202\{[^}]*\}\uE201/g, "[🖼 images]")
+      .replace(/\uE200[\s\S]*?\uE201/g, "");
   }
 
   function extractNodeRole(node) {
