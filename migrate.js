@@ -381,21 +381,35 @@
       scannedConvos = [];
       var offset = 0;
       var liveModels = {};
+      var scanLimit = 500; // Try large batches first, fall back if needed
 
       log("Scanning conversation list...");
 
       while (true) {
         var listResp = await fetch(
-          "https://chatgpt.com/backend-api/conversations?offset=" + offset + "&limit=100&order=updated",
+          "https://chatgpt.com/backend-api/conversations?offset=" + offset + "&limit=" + scanLimit + "&order=updated",
           {credentials: "include", headers: headers}
         );
 
         if (listResp.status !== 200) {
+          // If 500 limit failed on first request, try 100
+          if (offset === 0 && scanLimit > 100) {
+            log("Scan limit " + scanLimit + " rejected (HTTP " + listResp.status + "), trying 100...");
+            scanLimit = 100;
+            continue;
+          }
           throw new Error("Could not get conversations (HTTP " + listResp.status + ")");
         }
 
         var listData = await listResp.json();
         var items = listData.items || [];
+
+        // Detect if API capped our limit (asked 500, got exactly 100)
+        if (offset === 0 && scanLimit > 100 && items.length > 0 && items.length <= 100) {
+          log("API capped at " + items.length + ", using limit=100");
+          scanLimit = 100;
+        }
+
         log("Batch: " + items.length + " conversations (offset " + offset + ")");
 
         // Log first item's keys for diagnostics
@@ -419,7 +433,7 @@
         var statusEl = document.getElementById("g2c-scan-status");
         if (countEl) countEl.textContent = scannedConvos.length.toLocaleString();
         if (statusEl) {
-          statusEl.innerHTML = items.length >= 100
+          statusEl.innerHTML = items.length >= scanLimit
             ? '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Still scanning \u2014 this takes a minute, all good'
             : 'Scan complete!';
         }
@@ -434,7 +448,7 @@
         if (modelsEl) modelsEl.innerHTML = tagsHtml;
 
         offset += items.length;
-        if (items.length < 100) break;
+        if (items.length < scanLimit) break;
         await new Promise(function(r) { setTimeout(r, 500); });
       }
 
@@ -1174,41 +1188,78 @@
       if (dlMode) dlMode.textContent = "\u26A1 Batch mode \u2014 10x faster";
 
       var batchIndex = 0;
+      var consecutiveGroupFails = 0;
+      var MAX_CONSECUTIVE_FAILS = 3;
+
+      // Helper: download a list of IDs individually, return results
+      async function downloadIndividually(items, tkn) {
+        var results = [];
+        for (var ii = 0; ii < items.length; ii++) {
+          try {
+            var resp = await downloadSingle(items[ii].id, tkn);
+            if (resp.status === 429) {
+              log("Rate limited, waiting 30s\u2026", "error");
+              await new Promise(function(r) { setTimeout(r, 30000); });
+              ii--; continue;
+            }
+            if (resp.status !== 200) {
+              results.push({error: "HTTP " + resp.status, item: items[ii]});
+              continue;
+            }
+            var det = await resp.json();
+            results.push({detail: det, item: items[ii]});
+          } catch (e) {
+            results.push({error: e.message, item: items[ii]});
+          }
+          await new Promise(function(r) { setTimeout(r, 500); });
+        }
+        return results;
+      }
+
+      // Helper: try a batch, return {ok, data, status}
+      async function tryBatch(ids, tkn) {
+        try {
+          var resp = await downloadBatch(ids, tkn);
+          if (resp.status === 200) {
+            var d = await resp.json();
+            return {ok: true, data: d, status: 200};
+          }
+          return {ok: false, data: null, status: resp.status};
+        } catch (e) {
+          return {ok: false, data: null, status: 0, error: e.message};
+        }
+      }
+
       while (batchIndex < filtered.length && useBatch) {
         var batchItems = filtered.slice(batchIndex, batchIndex + BATCH_SIZE);
         var batchIds = [];
         for (var bi = 0; bi < batchItems.length; bi++) batchIds.push(batchItems[bi].id);
 
-        try {
-          var batchResp = await downloadBatch(batchIds, token);
+        // --- Attempt 1: full batch ---
+        var result = await tryBatch(batchIds, token);
 
-          if (batchResp.status === 429) {
-            log("Rate limited, waiting 30s\u2026", "error");
-            var dlTitle = document.getElementById("g2c-dl-title");
-            var dlRemaining = document.getElementById("g2c-dl-remaining");
-            if (dlTitle) dlTitle.textContent = "Rate limited \u2014 waiting 30s\u2026";
-            if (dlRemaining) dlRemaining.textContent = "Will resume automatically";
-            await new Promise(function(r) { setTimeout(r, 30000); });
-            continue; // retry same batch
-          }
+        if (result.status === 429) {
+          log("Rate limited, waiting 30s\u2026", "error");
+          var dlTitle = document.getElementById("g2c-dl-title");
+          var dlRemaining = document.getElementById("g2c-dl-remaining");
+          if (dlTitle) dlTitle.textContent = "Rate limited \u2014 waiting 30s\u2026";
+          if (dlRemaining) dlRemaining.textContent = "Will resume automatically";
+          await new Promise(function(r) { setTimeout(r, 30000); });
+          continue; // retry same batch
+        }
 
-          if (batchResp.status === 422 || batchResp.status === 405 || batchResp.status === 404) {
-            // Batch endpoint not available — fall back to individual
-            log("Batch endpoint unavailable (HTTP " + batchResp.status + "), falling back to individual downloads\u2026", "error");
-            useBatch = false;
-            break;
-          }
+        if (result.status === 422 || result.status === 405 || result.status === 404) {
+          log("Batch endpoint unavailable (HTTP " + result.status + "), falling back to individual downloads\u2026", "error");
+          useBatch = false;
+          break;
+        }
 
-          if (batchResp.status !== 200) {
-            log("Batch error (HTTP " + batchResp.status + "), falling back\u2026", "error");
-            useBatch = false;
-            break;
-          }
-
-          var batchData = await batchResp.json();
+        if (result.ok) {
+          // Success — process batch
+          consecutiveGroupFails = 0;
+          var batchData = result.data;
           var batchArr = Array.isArray(batchData) ? batchData : Object.values(batchData);
 
-          // Process each conversation in batch
           for (var bj = 0; bj < batchArr.length; bj++) {
             try {
               var detail = batchArr[bj];
@@ -1229,24 +1280,134 @@
             }
           }
 
-          // Update UI after each batch
-          var completed = successCount + errorCount;
-          var lastTitle = batchItems[batchItems.length - 1].title || "Untitled";
-          updateDlUI(completed, filtered.length, lastTitle, startTime);
-
-          if (completed % 100 === 0 || completed === filtered.length) {
-            log("Progress: " + completed + "/" + filtered.length);
-          }
-
           batchIndex += BATCH_SIZE;
-
-          // Small delay between batches to be respectful
           await new Promise(function(r) { setTimeout(r, 500); });
 
-        } catch (batchErr) {
-          log("Batch error: " + batchErr.message + ", falling back\u2026", "error");
-          useBatch = false;
-          break;
+        } else {
+          // --- Batch failed (likely 500) — graduated retry ---
+          log("Batch error (HTTP " + (result.status || result.error) + "), retrying in 3s\u2026", "error");
+          if (dlMode) dlMode.textContent = "\u26A1 Retrying batch\u2026";
+          await new Promise(function(r) { setTimeout(r, 3000); });
+
+          // --- Attempt 2: retry same batch ---
+          var retry = await tryBatch(batchIds, token);
+
+          if (retry.ok) {
+            consecutiveGroupFails = 0;
+            var retryArr = Array.isArray(retry.data) ? retry.data : Object.values(retry.data);
+            for (var rj = 0; rj < retryArr.length; rj++) {
+              try {
+                var det = retryArr[rj];
+                var detId = det.conversation_id || det.id;
+                var li = listLookup[detId] || batchItems[rj];
+                fullExport.conversations.push(processConversationDetail(det, li));
+                successCount++;
+              } catch (e) {
+                errorCount++;
+                fullExport.conversations.push({id: batchIds[rj], title: (batchItems[rj] && batchItems[rj].title) || "Unknown", error: e.message});
+              }
+            }
+            batchIndex += BATCH_SIZE;
+            await new Promise(function(r) { setTimeout(r, 500); });
+
+          } else if (batchIds.length > 1) {
+            // --- Attempt 3: split batch in half ---
+            log("Retry failed, splitting batch\u2026", "error");
+            if (dlMode) dlMode.textContent = "\u26A1 Splitting batch\u2026";
+            var mid = Math.ceil(batchIds.length / 2);
+            var halfA = batchIds.slice(0, mid);
+            var halfB = batchIds.slice(mid);
+            var itemsA = batchItems.slice(0, mid);
+            var itemsB = batchItems.slice(mid);
+
+            var anyHalfFailed = false;
+            var halves = [{ids: halfA, items: itemsA}, {ids: halfB, items: itemsB}];
+
+            for (var hi = 0; hi < halves.length; hi++) {
+              var halfResult = await tryBatch(halves[hi].ids, token);
+              if (halfResult.ok) {
+                var halfArr = Array.isArray(halfResult.data) ? halfResult.data : Object.values(halfResult.data);
+                for (var hj = 0; hj < halfArr.length; hj++) {
+                  try {
+                    var hDet = halfArr[hj];
+                    var hId = hDet.conversation_id || hDet.id;
+                    var hLi = listLookup[hId] || halves[hi].items[hj];
+                    fullExport.conversations.push(processConversationDetail(hDet, hLi));
+                    successCount++;
+                  } catch (e) {
+                    errorCount++;
+                    fullExport.conversations.push({id: halves[hi].ids[hj], title: (halves[hi].items[hj] && halves[hi].items[hj].title) || "Unknown", error: e.message});
+                  }
+                }
+              } else {
+                // Half batch also failed — download individually
+                anyHalfFailed = true;
+                log("Half-batch failed, downloading " + halves[hi].ids.length + " individually\u2026", "error");
+                var indResults = await downloadIndividually(halves[hi].items, token);
+                for (var ir = 0; ir < indResults.length; ir++) {
+                  if (indResults[ir].detail) {
+                    try {
+                      fullExport.conversations.push(processConversationDetail(indResults[ir].detail, indResults[ir].item));
+                      successCount++;
+                    } catch (e) {
+                      errorCount++;
+                      fullExport.conversations.push({id: indResults[ir].item.id, title: indResults[ir].item.title || "Unknown", error: e.message});
+                    }
+                  } else {
+                    errorCount++;
+                    fullExport.conversations.push({id: indResults[ir].item.id, title: indResults[ir].item.title || "Unknown", error: indResults[ir].error});
+                  }
+                }
+              }
+              await new Promise(function(r) { setTimeout(r, 500); });
+            }
+
+            if (anyHalfFailed) {
+              consecutiveGroupFails++;
+              log("Batch group recovered individually, resuming batch mode (" + consecutiveGroupFails + "/" + MAX_CONSECUTIVE_FAILS + " fails)", "error");
+            } else {
+              consecutiveGroupFails = 0;
+            }
+
+            batchIndex += BATCH_SIZE;
+
+          } else {
+            // Single item batch failed — download individually
+            var singleResults = await downloadIndividually(batchItems, token);
+            for (var sr = 0; sr < singleResults.length; sr++) {
+              if (singleResults[sr].detail) {
+                try {
+                  fullExport.conversations.push(processConversationDetail(singleResults[sr].detail, singleResults[sr].item));
+                  successCount++;
+                } catch (e) {
+                  errorCount++;
+                  fullExport.conversations.push({id: singleResults[sr].item.id, title: singleResults[sr].item.title || "Unknown", error: e.message});
+                }
+              } else {
+                errorCount++;
+                fullExport.conversations.push({id: singleResults[sr].item.id, title: singleResults[sr].item.title || "Unknown", error: singleResults[sr].error});
+              }
+            }
+            consecutiveGroupFails++;
+            batchIndex += BATCH_SIZE;
+          }
+
+          // Check if we should permanently give up on batch mode
+          if (consecutiveGroupFails >= MAX_CONSECUTIVE_FAILS) {
+            log("Too many consecutive batch failures (" + MAX_CONSECUTIVE_FAILS + "), switching to individual mode", "error");
+            useBatch = false;
+          } else if (consecutiveGroupFails > 0) {
+            if (dlMode) dlMode.textContent = "\u26A1 Batch mode \u2014 resumed";
+          }
+        }
+
+        // Update UI after each group
+        var completed = successCount + errorCount;
+        var lastTitle = batchItems[batchItems.length - 1].title || "Untitled";
+        updateDlUI(completed, filtered.length, lastTitle, startTime);
+
+        if (completed % 100 === 0 || completed === filtered.length) {
+          log("Progress: " + completed + "/" + filtered.length);
         }
       }
 

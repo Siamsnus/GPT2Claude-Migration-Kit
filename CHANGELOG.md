@@ -20,6 +20,13 @@ All notable changes to the GPT→Claude Migration Kit.
 - **Source filter** — when projects are detected, filter panel shows a "Source" section with checkboxes for `💬 Main conversations` and `📁 Project Name`.
 - **Scan summary breakdown** — shows "3,360 main + 1 from 1 project" when projects are found.
 - **Smart filenames** — export filename adapts: `chatgpt_all_conversations.json` for mixed, `chatgpt_project_investing.json` for single project, `chatgpt_projects.json` for multiple projects only.
+- **Batch download resilience** — graduated retry on batch failures instead of permanent fallback:
+  1. Retry same batch after 3s wait
+  2. Split batch 10→5 and try each half
+  3. Download failed items individually, then resume batch mode
+  4. Only permanent fallback after 3 consecutive batch group failures
+  - Mode indicator shows current state: ⚡ Batch mode / Retrying / Splitting / Resumed / 🐢 Individual mode
+- **Adaptive scan speed** — tries `limit=500` for conversation list API (7 calls vs 34 for 3,360 conversations). Falls back to `limit=100` if API rejects or caps the response.
 
 ### Changed
 - **Model filter hidden during scan** — when all models show as "unknown" (OpenAI removed `default_model_slug` from list API), the model filter section is hidden instead of showing a useless "unknown ✓ 3361" checkbox. Model breakdown still appears on completion screen after download.
