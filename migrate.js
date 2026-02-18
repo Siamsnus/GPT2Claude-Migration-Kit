@@ -785,6 +785,7 @@
       var limit = limitEl ? (parseInt(limitEl.value) || 0) : 0;
 
       var filtered = [];
+      var mainCount = 0;
       for (var i = 0; i < scannedConvos.length; i++) {
         var c = scannedConvos[i];
 
@@ -802,8 +803,14 @@
 
         if (previousExportIds[c.id]) continue;
 
+        // Limit only applies to main conversations — project convos always included
+        if (!c._project) {
+          if (limit > 0 && mainCount >= limit) continue;
+          mainCount++;
+        }
+
         filtered.push(c);
-        if (limit > 0 && filtered.length >= limit) break;
+      }
       }
       return filtered;
     } catch (err) {
