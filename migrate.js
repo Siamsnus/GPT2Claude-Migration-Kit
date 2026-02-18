@@ -665,6 +665,19 @@
       '<span style="font-size:28px;font-weight:800;color:#7eb8a0;">' + scanSummaryText +
       '</div>';
 
+    // Determine if model filter is useful (not just "unknown")
+    var hasRealModels = modelKeys.length > 1 || (modelKeys.length === 1 && modelKeys[0] !== "unknown");
+
+    var modelSection = '';
+    if (hasRealModels) {
+      modelSection = '\
+        <div class="g2c-filter-section">\
+          <div class="g2c-filter-label">Models</div>\
+          <div class="g2c-filter-models" id="g2c-filter-models">' + modelCheckboxes + '</div>\
+          <div class="g2c-select-btns"><button id="g2c-sel-all">Select all</button> \u00B7 <button id="g2c-sel-none">Select none</button></div>\
+        </div>';
+    }
+
     var filterHtml = '\
       <div class="g2c-filter-panel" id="g2c-filter-panel">\
         ' + scanSummary + '\
@@ -673,11 +686,7 @@
           <div class="g2c-filter-label">Source</div>\
           <div class="g2c-filter-models" id="g2c-filter-sources">' + sourceCheckboxes + '</div>\
         </div>' : '') + '\
-        <div class="g2c-filter-section">\
-          <div class="g2c-filter-label">Models</div>\
-          <div class="g2c-filter-models" id="g2c-filter-models">' + modelCheckboxes + '</div>\
-          <div class="g2c-select-btns"><button id="g2c-sel-all">Select all</button> \u00B7 <button id="g2c-sel-none">Select none</button></div>\
-        </div>\
+        ' + modelSection + '\
         <div class="g2c-filter-section">\
           <div class="g2c-filter-label">Date range</div>\
           <div class="g2c-filter-row">\
@@ -808,8 +817,10 @@
   }
 
   function estimateTime(count) {
-    // Batch mode: ~10 conversations per 0.5-1s call
-    var secs = Math.ceil(count / BATCH_SIZE) * 1.0;
+    // Real-world: ~1.5s per batch of 10 (0.5s delay + ~1s fetch/parse)
+    // Plus potential rate limits add significant time on large exports
+    var secs = Math.ceil(count / BATCH_SIZE) * 1.5;
+    if (count > 1000) secs *= 1.3; // large exports hit more rate limits
     if (secs < 60) return "~" + Math.max(Math.round(secs), 1) + " seconds";
     var mins = Math.round(secs / 60);
     if (mins < 60) return "~" + mins + " minutes";
