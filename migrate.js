@@ -401,6 +401,7 @@
           var sample = items[0];
           log("Sample model: " + (sample.default_model_slug || sample.model || sample.model_slug || "null"));
           log("Sample time: update=" + sample.update_time + " create=" + sample.create_time);
+          log("Sample gizmo: " + (sample.gizmo_id || sample.conversation_template_id || sample.workspace_id || "none"));
         }
 
         for (var j = 0; j < items.length; j++) {
@@ -441,27 +442,63 @@
         var statusEl = document.getElementById("g2c-scan-status");
         if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Checking projects\u2026';
 
-        // Scrape sidebar for project links (g-p- prefix = project gizmo)
-        var projLinks = document.querySelectorAll('a[href*="/g/g-p-"]');
         var discoveredProjects = {};
+
+        // Method 1: Check conversation items for gizmo_id (project conversations have this)
+        for (var gi = 0; gi < scannedConvos.length; gi++) {
+          var gid = scannedConvos[gi].gizmo_id || scannedConvos[gi].conversation_template_id || scannedConvos[gi].workspace_id || null;
+          if (gid && gid.indexOf("g-p-") === 0 && !discoveredProjects[gid]) {
+            discoveredProjects[gid] = null; // name unknown yet
+            log("Found project gizmo in conversation list: " + gid);
+          }
+        }
+
+        // Method 2: Try API endpoint for user's gizmos/projects
+        try {
+          var gizmoResp = await fetch(
+            "https://chatgpt.com/backend-api/gizmos/discovery/mine",
+            {credentials: "include", headers: headers}
+          );
+          if (gizmoResp.status === 200) {
+            var gizmoData = await gizmoResp.json();
+            var gizmoItems = gizmoData.list || gizmoData.items || gizmoData.gizmos || [];
+            if (Array.isArray(gizmoItems)) {
+              for (var gmi = 0; gmi < gizmoItems.length; gmi++) {
+                var gizmo = gizmoItems[gmi].resource || gizmoItems[gmi].gizmo || gizmoItems[gmi];
+                var gizmoId = gizmo.id || gizmo.short_url || "";
+                if (gizmoId.indexOf("g-p-") === 0 || (gizmo.type && gizmo.type === "project")) {
+                  var gName = (gizmo.display && gizmo.display.name) || gizmo.name || gizmo.title || "Project";
+                  discoveredProjects[gizmoId] = gName;
+                  log("Found project via API: " + gName + " (" + gizmoId + ")");
+                }
+              }
+            }
+          } else {
+            log("Gizmos API: HTTP " + gizmoResp.status + " (trying other methods)");
+          }
+        } catch (apiErr) {
+          log("Gizmos API failed: " + apiErr.message + " (trying other methods)");
+        }
+
+        // Method 3: DOM scraping fallback — scan sidebar for project links
+        var projLinks = document.querySelectorAll('a[href*="/g/g-p-"]');
         for (var pl = 0; pl < projLinks.length; pl++) {
           var href = projLinks[pl].getAttribute("href") || "";
           var idMatch = href.match(/g-p-[a-f0-9]+/);
           if (!idMatch) continue;
           var projId = idMatch[0];
           if (discoveredProjects[projId]) continue;
-          // Extract project name from URL slug or link text
           var slugMatch = href.match(/g-p-[a-f0-9]+-([^/]+)/);
           var linkText = projLinks[pl].textContent.trim();
           var projName = linkText || (slugMatch ? slugMatch[1].replace(/-/g, " ") : "Project");
-          // Skip if it looks like a conversation title inside a project (has /c/ in URL)
           if (href.indexOf("/c/") > -1) continue;
           discoveredProjects[projId] = projName;
+          log("Found project via DOM: " + projName + " (" + projId + ")");
         }
 
         var projIds = Object.keys(discoveredProjects);
         if (projIds.length > 0) {
-          log("Found " + projIds.length + " project(s) in sidebar");
+          log("Found " + projIds.length + " project(s) total");
 
           // Build index of existing conversation IDs for deduplication
           var existingIdx = {};
@@ -471,8 +508,27 @@
 
           for (var pi = 0; pi < projIds.length; pi++) {
             var projId = projIds[pi];
-            var projName = discoveredProjects[projId];
-            log("Fetching project: " + projName);
+            var projName = discoveredProjects[projId] || "Project";
+
+            // Try to resolve project name if unknown
+            if (projName === "Project" || projName === null) {
+              try {
+                var infoResp = await fetch(
+                  "https://chatgpt.com/backend-api/gizmos/" + projId,
+                  {credentials: "include", headers: headers}
+                );
+                if (infoResp.status === 200) {
+                  var infoData = await infoResp.json();
+                  var gizmoInfo = infoData.gizmo || infoData;
+                  projName = (gizmoInfo.display && gizmoInfo.display.name) || gizmoInfo.name || gizmoInfo.title || "Project";
+                  log("Resolved project name: " + projName);
+                }
+              } catch (nameErr) {
+                // keep default name
+              }
+            }
+
+            log("Fetching project: " + projName + " (" + projId + ")");
             var statusEl = document.getElementById("g2c-scan-status");
             if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Scanning project: ' + projName + '\u2026';
 
