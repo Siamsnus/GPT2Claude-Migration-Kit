@@ -1479,7 +1479,10 @@
       }
 
       var json = JSON.stringify(fullExport, null, 2);
-      var sizeMB = (json.length / 1024 / 1024).toFixed(1);
+      var sizeBytes = json.length;
+      var sizeStr = sizeBytes < 1024 * 1024
+        ? (sizeBytes / 1024).toFixed(0) + " KB"
+        : (sizeBytes / 1024 / 1024).toFixed(1) + " MB";
 
       // Smart filename based on what was exported
       var exportFilename = "chatgpt_all_conversations.json";
@@ -1500,7 +1503,7 @@
         exportFilename = "chatgpt_projects.json";
       }
       downloadFile(json, exportFilename, "application/json");
-      log("DONE! " + successCount + " conversations, " + errorCount + " errors, ~" + sizeMB + " MB", "success");
+      log("DONE! " + successCount + " conversations, " + errorCount + " errors, ~" + sizeStr, "success");
 
       // Collect model breakdown from export
       var modelBreakdown = {};
@@ -1541,7 +1544,7 @@
           <div class="g2c-complete">\
             <div class="g2c-complete-icon">\u2705</div>\
             <div class="g2c-complete-title">Export Complete!</div>\
-            <div class="g2c-complete-sub">' + successCount + ' conversations \u00B7 ' + sizeMB + ' MB \u00B7 ' + elapsedStr + '</div>\
+            <div class="g2c-complete-sub">' + successCount + ' conversations \u00B7 ' + sizeStr + ' \u00B7 ' + elapsedStr + '</div>\
             ' + modelTagsHtml + '\
           </div>\
           <div class="g2c-whatsnext">\
