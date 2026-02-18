@@ -463,10 +463,10 @@
         if (projIds.length > 0) {
           log("Found " + projIds.length + " project(s) in sidebar");
 
-          // Build set of existing conversation IDs for deduplication
-          var existingIds = {};
+          // Build index of existing conversation IDs for deduplication
+          var existingIdx = {};
           for (var ei = 0; ei < scannedConvos.length; ei++) {
-            existingIds[scannedConvos[ei].id] = true;
+            existingIdx[scannedConvos[ei].id] = ei;
           }
 
           for (var pi = 0; pi < projIds.length; pi++) {
@@ -478,6 +478,7 @@
 
             var cursor = 0;
             var projConvoCount = 0;
+            var projTaggedCount = 0;
             while (true) {
               var projConvoResp = await fetch(
                 "https://chatgpt.com/backend-api/gizmos/" + projId + "/conversations?cursor=" + cursor,
@@ -493,10 +494,16 @@
                 projItems[pj]._project = projName;
                 projItems[pj]._project_id = projId;
                 // Only add if not already in main scan (deduplicate)
-                if (!existingIds[projItems[pj].id]) {
+                if (existingIdx[projItems[pj].id] === undefined) {
                   scannedConvos.push(projItems[pj]);
-                  existingIds[projItems[pj].id] = true;
+                  existingIdx[projItems[pj].id] = scannedConvos.length - 1;
                   projConvoCount++;
+                } else {
+                  // Tag the existing entry as belonging to this project
+                  var dupIdx = existingIdx[projItems[pj].id];
+                  scannedConvos[dupIdx]._project = projName;
+                  scannedConvos[dupIdx]._project_id = projId;
+                  projTaggedCount++;
                 }
               }
               var countEl = document.getElementById("g2c-scan-count");
@@ -507,7 +514,7 @@
               cursor = projConvoData.cursor;
               await new Promise(function(r) { setTimeout(r, 500); });
             }
-            log("Project " + projName + ": " + projConvoCount + " unique conversation(s)");
+            log("Project " + projName + ": " + projConvoCount + " new, " + projTaggedCount + " tagged");
           }
           log("Total with projects: " + scannedConvos.length);
         } else {
