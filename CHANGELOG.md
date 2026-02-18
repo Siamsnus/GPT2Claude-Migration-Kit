@@ -34,6 +34,7 @@ All notable changes to the GPT→Claude Migration Kit.
   - `code` with `search()` → `[🔍 search("query")]` marker
   - `code` with language → proper fenced code block
   - `execution_output` → same handling as code
+- **Citation marker stripping** — OpenAI's internal citation references (`\uE200cite\uE202turn0search3\uE201`) are now stripped from message text at export time. These private-use Unicode markers from ChatGPT's search tool rendered as garbled `【cite†turnOsearch3】` artifacts. Viewer also strips them at data load and render time for backward compatibility with older exports.
 - **Viewer: smart content rendering** — thinking indicators, reasoning recaps, and search queries now render as styled inline elements instead of being hidden or showing raw JSON:
   - 💭 "Thought for a few seconds" → subtle italic indicator between messages
   - 🔍 search queries → compact monospace pill

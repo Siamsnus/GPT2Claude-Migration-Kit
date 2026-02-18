@@ -475,6 +475,12 @@ function showUI(activeTab) {
 
 // ===== PROCESS CONVERSATIONS =====
 function processConversations(content) {
+  // Strip OpenAI internal citation markers (private-use Unicode U+E200/E201/E202)
+  function stripCitations(text) {
+    if (!text) return text;
+    return text.replace(/\uE200cite(\uE202turn\dsearch\d+)+\uE201/g, "");
+  }
+
   try {
     var data = JSON.parse(content);
   } catch (e) {
@@ -503,10 +509,10 @@ function processConversations(content) {
     if (c.messages && Array.isArray(c.messages)) {
       // Migration kit format: messages already flattened
       msgs = c.messages.map(function(m) {
-        var msg = { role: m.role || "unknown", text: m.content || m.text || "", timestamp: m.timestamp || 0, model: m.model || "" };
+        var msg = { role: m.role || "unknown", text: stripCitations(m.content || m.text || ""), timestamp: m.timestamp || 0, model: m.model || "" };
         if (m.alternatives && m.alternatives.length > 0) {
           msg.alternatives = m.alternatives.map(function(a) {
-            return { text: a.content || a.text || "", role: a.role || "assistant", timestamp: a.timestamp || 0, model: a.model || "" };
+            return { text: stripCitations(a.content || a.text || ""), role: a.role || "assistant", timestamp: a.timestamp || 0, model: a.model || "" };
           });
           hasBranches = true;
         }
@@ -1276,7 +1282,9 @@ function escHtml(s) {
 }
 
 function renderMarkdown(text) {
-  var s = escHtml(text);
+  // Strip OpenAI internal citation markers (private-use Unicode delimiters)
+  var cleaned = text.replace(/\uE200cite(\uE202turn\dsearch\d+)+\uE201/g, "");
+  var s = escHtml(cleaned);
   // Image placeholders — [🖼 description] markers from export
   s = s.replace(/\[🖼\s*([^\]]*)\]/g, '<div class="img-placeholder"><svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="rgba(212,165,116,0.1)"/><path d="M10 24l5-7 4 5 3-4 4 6H10z" fill="rgba(212,165,116,0.3)"/><circle cx="23" cy="14" r="3" fill="rgba(212,165,116,0.3)"/></svg><span>$1<br><span style="font-size:0.72rem;color:var(--text-faint);">Image not included in export</span></span></div>');
   // Headers

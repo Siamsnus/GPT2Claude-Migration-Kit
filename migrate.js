@@ -981,7 +981,7 @@
         }
       }
     }
-    return textParts.join("\n");
+    return textParts.join("\n").replace(/\uE200cite(\uE202turn\dsearch\d+)+\uE201/g, "");
   }
 
   function extractNodeRole(node) {
