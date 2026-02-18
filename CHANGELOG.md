@@ -12,6 +12,7 @@ All notable changes to the GPT→Claude Migration Kit.
 - **Source filter** — when projects are detected, filter panel shows a "Source" section with checkboxes for `💬 Main conversations` and `📁 Project Name`, allowing export of only project conversations or everything together.
 - **Scan summary breakdown** — shows "3,360 main + 1 from 1 project" when projects are found.
 - **Smart filenames** — export filename adapts based on content: `chatgpt_all_conversations.json` for everything, `chatgpt_project_investing.json` for a single project, `chatgpt_projects.json` for multiple projects only.
+- **Era presets** — one-click date range buttons (GPT-3.5 / GPT-4 / GPT-4o / GPT-5+) based on actual model launch dates. Lets users quickly export conversations from a specific era without knowing exact dates.
 
 ## [2.2.0] — 2026-02-16
 

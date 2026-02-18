@@ -622,6 +622,13 @@
             <span style="color:#555;">\u2192</span>\
             <input type="date" class="g2c-filter-input" id="g2c-date-to" value="' + tsToDate(newest) + '">\
           </div>\
+          <div class="g2c-select-btns" id="g2c-era-btns" style="flex-wrap:wrap;margin-top:4px;">\
+            <button data-era="all">All</button> \u00B7\
+            <button data-era="gpt35">GPT-3.5</button> \u00B7\
+            <button data-era="gpt4">GPT-4</button> \u00B7\
+            <button data-era="gpt4o">GPT-4o</button> \u00B7\
+            <button data-era="gpt5">GPT-5+</button>\
+          </div>\
         </div>\
         <div class="g2c-filter-section">\
           <div class="g2c-filter-label">Max conversations (0 = all)</div>\
@@ -684,6 +691,33 @@
     var filterInputs = document.querySelectorAll("#g2c-filter-models input, #g2c-filter-sources input, #g2c-date-from, #g2c-date-to, #g2c-limit");
     for (var fi = 0; fi < filterInputs.length; fi++) {
       filterInputs[fi].addEventListener("change", updateFilterSummary);
+    }
+
+    // Era preset buttons
+    var eraRanges = {
+      "all": [tsToDate(oldest), tsToDate(newest)],
+      "gpt35": ["2022-11-30", "2023-03-13"],
+      "gpt4": ["2023-03-14", "2024-05-12"],
+      "gpt4o": ["2024-05-13", "2025-08-06"],
+      "gpt5": ["2025-08-07", tsToDate(newest)]
+    };
+    var eraBtns = document.querySelectorAll("#g2c-era-btns button");
+    for (var ei = 0; ei < eraBtns.length; ei++) {
+      eraBtns[ei].addEventListener("click", function() {
+        var era = this.getAttribute("data-era");
+        var range = eraRanges[era];
+        if (range) {
+          var fromEl = document.getElementById("g2c-date-from");
+          var toEl = document.getElementById("g2c-date-to");
+          if (fromEl) fromEl.value = range[0];
+          if (toEl) toEl.value = range[1];
+          // Highlight active era button
+          var siblings = document.querySelectorAll("#g2c-era-btns button");
+          for (var si = 0; si < siblings.length; si++) siblings[si].style.color = "";
+          this.style.color = "#d4a574";
+          updateFilterSummary();
+        }
+      });
     }
 
     safeAddEvent("g2c-prev-file", "change", function() {
