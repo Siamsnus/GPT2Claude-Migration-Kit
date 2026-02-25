@@ -1,4 +1,4 @@
-// GPT2Claude Migration Kit v2.3
+// GPT2Claude Migration Kit v2.4
 // https://github.com/Siamsnus/GPT2Claude-Migration-Kit
 // Exports ChatGPT memories, conversations, and instructions
 // No data leaves your browser - everything runs locally
@@ -85,7 +85,7 @@
     .g2c-progress-text { font-size: 11px; color: #999; margin-top: 6px; }\
     .g2c-log { margin-top: 14px; max-height: 140px; overflow-y: auto; background: #141418; border: 1px solid #252530; border-radius: 10px; padding: 10px 12px; font-family: 'SF Mono', 'Consolas', monospace; font-size: 11px; line-height: 1.6; color: #999; display: none; }\
     .g2c-log.visible { display: block; }\
-    .g2c-log-entry { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\
+    .g2c-log-entry { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 1px 0; }\
     .g2c-log-entry.error { color: #e07070; }\
     .g2c-log-entry.success { color: #7eb8a0; }\
     .g2c-footer { padding: 14px 22px; border-top: 1px solid #252530; display: flex; justify-content: space-between; align-items: center; }\
@@ -97,6 +97,15 @@
     .g2c-toggle-log:hover { color: #aaa; }\
     .g2c-drag-handle { cursor: move; }\
     .g2c-divider { height: 1px; background: #2a2a35; margin: 6px 0 10px; }\
+    .g2c-tool-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #1e1e26; border: 1px solid #252530; border-radius: 10px; margin-bottom: 6px; }\
+    .g2c-tool-label { font-size: 12px; color: #ccc; display: flex; align-items: center; gap: 8px; }\
+    .g2c-tool-label .icon { font-size: 16px; }\
+    .g2c-tool-label .sub { font-size: 10px; color: #666; display: block; }\
+    .g2c-tool-toggle { padding: 4px 12px; border-radius: 6px; border: 1px solid #333340; background: #222228; color: #999; font-size: 11px; cursor: pointer; font-weight: 600; transition: all 0.15s; }\
+    .g2c-tool-toggle:hover { border-color: #d4a574; color: #d4a574; }\
+    .g2c-tool-toggle.on { border-color: #7eb8a0; color: #7eb8a0; background: rgba(126,184,160,0.08); }\
+    .g2c-tool-toggle.checking { pointer-events: none; color: #555; }\
+    .g2c-tool-note { font-size: 10px; color: #7eb8a0; text-align: center; padding: 4px 0 2px; display: none; }\
     .g2c-filter-panel { margin-top: 10px; }\
     .g2c-filter-section { margin-bottom: 12px; }\
     .g2c-filter-label { font-size: 10px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }\
@@ -126,7 +135,7 @@
     <div class="g2c-header g2c-drag-handle">\
       <div>\
         <div class="g2c-title"><span class="gpt">GPT</span><span class="arrow">\u2192</span><span class="claude">Claude</span></div>\
-        <div class="g2c-version">Migration Kit v2.3</div>\
+        <div class="g2c-version">Migration Kit v2.4</div>\
       </div>\
       <button class="g2c-close" id="g2c-close">\u00D7</button>\
     </div>\
@@ -159,6 +168,15 @@
           <div class="g2c-btn-sub">All three in one click</div>\
         </div>\
       </button>\
+      <div class="g2c-divider" id="g2c-camera-divider"></div>\
+      <div class="g2c-tool-row" id="g2c-camera-row">\
+        <div class="g2c-tool-label">\
+          <span class="icon">\uD83D\uDCF7</span>\
+          <span>Desktop Camera<span class="sub">Unlock webcam input on desktop</span></span>\
+        </div>\
+        <button class="g2c-tool-toggle" id="g2c-camera-btn">Check</button>\
+      </div>\
+      <div class="g2c-tool-note" id="g2c-camera-note"></div>\
       <div class="g2c-progress" id="g2c-progress" style="display:none;">\
         <div class="g2c-progress-bar"><div class="g2c-progress-fill" id="g2c-progress-fill"></div></div>\
         <div class="g2c-progress-text" id="g2c-progress-text"></div>\
@@ -308,7 +326,7 @@
       var token = await getToken();
 
       log("Fetching memories...");
-      var resp = await fetch("https://chatgpt.com/backend-api/memories", {
+      var resp = await fetch("https://chatgpt.com/backend-api/memories?include_memory_entries=true", {
         credentials: "include",
         headers: {"Authorization": "Bearer " + token}
       });
@@ -321,23 +339,38 @@
       var memories = data.memories || data.results || data;
       var md = "# ChatGPT Memory Export\n";
       md += "# Exported: " + new Date().toISOString() + "\n";
-      md += "# Tool: GPT2Claude Migration Kit v2.3\n\n";
+      md += "# Tool: GPT2Claude Migration Kit v2.4\n";
+      if (data.memory_num_tokens) md += "# Tokens used: " + data.memory_num_tokens + " / " + (data.memory_max_tokens || "?") + "\n";
+      md += "\n";
 
       var count = 0;
+      var warmCount = 0;
+      var coldCount = 0;
       if (Array.isArray(memories)) {
         count = memories.length;
+        // Sort: warm first, then cold
+        memories.sort(function(a, b) {
+          if (a.status === "warm" && b.status !== "warm") return -1;
+          if (a.status !== "warm" && b.status === "warm") return 1;
+          return 0;
+        });
         for (var i = 0; i < memories.length; i++) {
           var m = memories[i];
           var content = m.content || m.value || m.text || m.memory || JSON.stringify(m);
-          md += (i + 1) + ". " + content + "\n";
+          var status = m.status || "unknown";
+          if (status === "warm") warmCount++;
+          else if (status === "cold") coldCount++;
+          var tag = status === "cold" ? " [older/less relevant]" : "";
+          md += (i + 1) + ". " + content + tag + "\n";
         }
       } else {
         md += JSON.stringify(memories, null, 2);
       }
 
-      log("Found " + count + " memories");
+      var summary = count + " memories (" + warmCount + " active" + (coldCount > 0 ? ", " + coldCount + " older" : "") + ")";
+      log("Found " + summary);
       downloadFile(md, "chatgpt_memories.md", "text/markdown");
-      setButtonState(btn, "done", count + " memories exported");
+      setButtonState(btn, "done", summary);
 
     } catch (err) {
       log("Memory export failed: " + err.message, "error");
@@ -585,6 +618,86 @@
         log("Projects check failed: " + projErr.message + " (continuing without)");
       }
 
+      // Discover shared conversations
+      try {
+        log("Checking shared conversations...");
+        var statusEl = document.getElementById("g2c-scan-status");
+        if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Checking shared conversations\u2026';
+
+        var sharedResp = await fetch(
+          "https://chatgpt.com/backend-api/shared_conversations?order=updated&limit=100&offset=0",
+          {credentials: "include", headers: headers}
+        );
+
+        if (sharedResp.status === 200) {
+          var sharedData = await sharedResp.json();
+          var sharedItems = sharedData.items || [];
+          var totalShared = sharedItems.length;
+
+          // Paginate if more
+          var sharedOffset = sharedItems.length;
+          while (sharedItems.length >= 100) {
+            var moreResp = await fetch(
+              "https://chatgpt.com/backend-api/shared_conversations?order=updated&limit=100&offset=" + sharedOffset,
+              {credentials: "include", headers: headers}
+            );
+            if (moreResp.status !== 200) break;
+            var moreData = await moreResp.json();
+            var moreItems = moreData.items || [];
+            if (moreItems.length === 0) break;
+            for (var mi = 0; mi < moreItems.length; mi++) sharedItems.push(moreItems[mi]);
+            sharedOffset += moreItems.length;
+            totalShared = sharedItems.length;
+            await new Promise(function(r) { setTimeout(r, 500); });
+          }
+
+          // Build index of existing conversation IDs for deduplication
+          var existingIds = {};
+          for (var ei = 0; ei < scannedConvos.length; ei++) {
+            existingIds[scannedConvos[ei].id] = true;
+          }
+
+          var newShared = 0;
+          for (var si = 0; si < sharedItems.length; si++) {
+            var shared = sharedItems[si];
+            // Shared items might have conversation_id linking to a regular conversation
+            var sharedConvoId = shared.conversation_id || shared.id;
+            if (existingIds[sharedConvoId]) {
+              // Already in main list — tag it as shared but don't duplicate
+              for (var ti = 0; ti < scannedConvos.length; ti++) {
+                if (scannedConvos[ti].id === sharedConvoId) {
+                  scannedConvos[ti]._also_shared = true;
+                  scannedConvos[ti]._share_id = shared.share_id || shared.id;
+                  break;
+                }
+              }
+            } else {
+              // New shared conversation — add to scan list
+              shared._shared = true;
+              shared._share_id = shared.share_id || shared.id;
+              if (!shared.title) shared.title = shared.title || "Shared conversation";
+              scannedConvos.push(shared);
+              newShared++;
+            }
+          }
+
+          if (totalShared > 0) {
+            log("Shared conversations: " + totalShared + " found (" + newShared + " unique)");
+          } else {
+            log("No shared conversations");
+          }
+
+          var countEl = document.getElementById("g2c-scan-count");
+          if (countEl) countEl.textContent = scannedConvos.length.toLocaleString();
+        } else if (sharedResp.status !== 404) {
+          log("Shared conversations: HTTP " + sharedResp.status + " (skipped)");
+        } else {
+          log("No shared conversations");
+        }
+      } catch (sharedErr) {
+        log("Shared conversations check: " + sharedErr.message + " (continuing without)");
+      }
+
       // Show filter panel
       setButtonState(btn, "done", scannedConvos.length + " conversations found");
 
@@ -618,7 +731,7 @@
       if (t > 0 && t < oldest) oldest = t;
       if (t > 0 && t > newest) newest = t;
       // Track source
-      var src = c._project || "Main conversations";
+      var src = c._shared ? "Shared conversations" : (c._project || "Main conversations");
       sources[src] = (sources[src] || 0) + 1;
     }
     var modelKeys = Object.keys(models).sort(function(a, b) { return models[b] - models[a]; });
@@ -652,7 +765,7 @@
     var hasProjects = sourceKeys.length > 1;
     for (var si = 0; si < sourceKeys.length; si++) {
       var sk = sourceKeys[si];
-      var icon = sk === "Main conversations" ? "\uD83D\uDCAC" : "\uD83D\uDCC1";
+      var icon = sk === "Main conversations" ? "\uD83D\uDCAC" : (sk === "Shared conversations" ? "\uD83D\uDD17" : "\uD83D\uDCC1");
       sourceCheckboxes += '<label class="g2c-model-row"><input type="checkbox" checked data-source="' + sk + '"> ' + icon + ' ' + sk + '<span class="cnt">' + sources[sk] + '</span></label>';
     }
 
@@ -686,6 +799,11 @@
     var filterHtml = '\
       <div class="g2c-filter-panel" id="g2c-filter-panel">\
         ' + scanSummary + '\
+        <div class="g2c-filter-section">\
+          <div class="g2c-filter-label">Search conversations</div>\
+          <input type="text" class="g2c-filter-input" id="g2c-search" placeholder="Filter by title\u2026" style="width:100%;">\
+          <div style="font-size:10px;color:#555;margin-top:3px;">Filters by conversation title. Leave empty = all.</div>\
+        </div>\
         ' + (hasProjects ? '\
         <div class="g2c-filter-section">\
           <div class="g2c-filter-label">Source</div>\
@@ -742,7 +860,7 @@
     }
 
     // Hide the main buttons — with null guards
-    var hideIds = ["g2c-btn-memory", "g2c-btn-convos", "g2c-btn-instructions", "g2c-btn-all"];
+    var hideIds = ["g2c-btn-memory", "g2c-btn-convos", "g2c-btn-instructions", "g2c-btn-all", "g2c-camera-divider", "g2c-camera-row", "g2c-camera-note"];
     for (var hi = 0; hi < hideIds.length; hi++) {
       var hideEl = document.getElementById(hideIds[hi]);
       if (hideEl) hideEl.style.display = "none";
@@ -771,6 +889,9 @@
     for (var fi = 0; fi < filterInputs.length; fi++) {
       filterInputs[fi].addEventListener("change", updateFilterSummary);
     }
+    // Search box — live filtering as you type
+    var searchInput = document.getElementById("g2c-search");
+    if (searchInput) searchInput.addEventListener("input", updateFilterSummary);
 
     // Era preset buttons
     var eraRanges = {
@@ -864,14 +985,24 @@
 
       var limit = limitEl ? (parseInt(limitEl.value) || 0) : 0;
 
+      // Search filter — client-side title matching
+      var searchEl = document.getElementById("g2c-search");
+      var searchText = searchEl ? searchEl.value.trim().toLowerCase() : "";
+
       var filtered = [];
       var mainCount = 0;
       for (var i = 0; i < scannedConvos.length; i++) {
         var c = scannedConvos[i];
 
+        // Search filter — match against title
+        if (searchText) {
+          var title = (c.title || "").toLowerCase();
+          if (title.indexOf(searchText) === -1) continue;
+        }
+
         // Source filter
         if (hasSourceFilter) {
-          var src = c._project || "Main conversations";
+          var src = c._shared ? "Shared conversations" : (c._project || "Main conversations");
           if (!selectedSources[src]) continue;
         }
 
@@ -1149,11 +1280,30 @@
     return resp;
   }
 
+  async function downloadShared(shareId, token) {
+    var resp = await fetch("https://chatgpt.com/backend-api/share/" + shareId, {
+      credentials: "include",
+      headers: {"Authorization": "Bearer " + token}
+    });
+    return resp;
+  }
+
   async function startFilteredDownload() {
     var filtered = getFilteredConvos();
     if (filtered.length === 0) {
       alert("No conversations selected. Adjust your filters.");
       return;
+    }
+
+    // Separate shared conversations (can't use batch endpoint)
+    var regularConvos = [];
+    var sharedConvos = [];
+    for (var fi = 0; fi < filtered.length; fi++) {
+      if (filtered[fi]._shared) {
+        sharedConvos.push(filtered[fi]);
+      } else {
+        regularConvos.push(filtered[fi]);
+      }
     }
 
     // Replace filter panel with download hero UI (State 4)
@@ -1180,8 +1330,8 @@
 
       var fullExport = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.3",
-        format_version: 3,
+        tool: "GPT2Claude Migration Kit v2.4",
+        format_version: 4,
         total_conversations: filtered.length,
         conversations: []
       };
@@ -1196,7 +1346,8 @@
         listLookup[filtered[li].id] = filtered[li];
       }
 
-      // ---- TRY BATCH MODE FIRST ----
+      // ---- TRY BATCH MODE FIRST (regular conversations only) ----
+      if (regularConvos.length > 0) {
       log("Using batch download (10 at a time)\u2026");
       var dlMode = document.getElementById("g2c-dl-mode");
       if (dlMode) dlMode.textContent = "\u26A1 Batch mode \u2014 10x faster";
@@ -1244,8 +1395,8 @@
         }
       }
 
-      while (batchIndex < filtered.length && useBatch) {
-        var batchItems = filtered.slice(batchIndex, batchIndex + BATCH_SIZE);
+      while (batchIndex < regularConvos.length && useBatch) {
+        var batchItems = regularConvos.slice(batchIndex, batchIndex + BATCH_SIZE);
         var batchIds = [];
         for (var bi = 0; bi < batchItems.length; bi++) batchIds.push(batchItems[bi].id);
 
@@ -1432,8 +1583,8 @@
 
         // Start from where batch left off
         var startFrom = successCount + errorCount;
-        for (var i = startFrom; i < filtered.length; i++) {
-          var c = filtered[i];
+        for (var i = startFrom; i < regularConvos.length; i++) {
+          var c = regularConvos[i];
           var title = c.title || "Untitled";
 
           updateDlUI(i + 1, filtered.length, title, startTime);
@@ -1477,6 +1628,54 @@
           await new Promise(function(r) { setTimeout(r, 1000); });
         }
       }
+      } // end if (regularConvos.length > 0)
+
+      // ---- DOWNLOAD SHARED CONVERSATIONS ----
+      if (sharedConvos.length > 0) {
+        log("Downloading " + sharedConvos.length + " shared conversation(s)\u2026");
+        var dlMode = document.getElementById("g2c-dl-mode");
+        if (dlMode) dlMode.textContent = "\uD83D\uDD17 Shared conversations";
+
+        for (var si = 0; si < sharedConvos.length; si++) {
+          var sc = sharedConvos[si];
+          var shareId = sc._share_id;
+          var scTitle = sc.title || "Shared conversation";
+
+          var completed = successCount + errorCount;
+          updateDlUI(completed + 1, filtered.length, scTitle, startTime);
+
+          try {
+            var sharedResp = await downloadShared(shareId, token);
+
+            if (sharedResp.status === 429) {
+              log("Rate limited, waiting 30s\u2026", "error");
+              await new Promise(function(r) { setTimeout(r, 30000); });
+              si--; continue;
+            }
+
+            if (sharedResp.status !== 200) {
+              log("Skipped shared: " + scTitle + " (HTTP " + sharedResp.status + ")", "error");
+              errorCount++;
+              fullExport.conversations.push({id: sc.id, title: scTitle, shared: true, error: "HTTP " + sharedResp.status});
+              continue;
+            }
+
+            var sharedDetail = await sharedResp.json();
+            var processed = processConversationDetail(sharedDetail, sc);
+            processed.shared = true;
+            processed.share_id = shareId;
+            fullExport.conversations.push(processed);
+            successCount++;
+
+          } catch (sharedErr) {
+            log("Error shared: " + scTitle + " \u2014 " + sharedErr.message, "error");
+            errorCount++;
+            fullExport.conversations.push({id: sc.id, title: scTitle, shared: true, error: sharedErr.message});
+          }
+
+          await new Promise(function(r) { setTimeout(r, 1000); });
+        }
+      }
 
       var json = JSON.stringify(fullExport, null, 2);
       var sizeBytes = json.length;
@@ -1488,19 +1687,24 @@
       var exportFilename = "chatgpt_all_conversations.json";
       var projectNames = {};
       var hasMain = false;
+      var hasShared = false;
       for (var fi = 0; fi < fullExport.conversations.length; fi++) {
-        if (fullExport.conversations[fi].project) {
+        if (fullExport.conversations[fi].shared) {
+          hasShared = true;
+        } else if (fullExport.conversations[fi].project) {
           projectNames[fullExport.conversations[fi].project] = true;
         } else {
           hasMain = true;
         }
       }
       var projNameList = Object.keys(projectNames);
-      if (!hasMain && projNameList.length === 1) {
+      if (!hasMain && !hasShared && projNameList.length === 1) {
         // Only one project exported
         exportFilename = "chatgpt_project_" + projNameList[0].toLowerCase().replace(/[^a-z0-9]+/g, "_") + ".json";
-      } else if (!hasMain && projNameList.length > 1) {
+      } else if (!hasMain && !hasShared && projNameList.length > 1) {
         exportFilename = "chatgpt_projects.json";
+      } else if (!hasMain && hasShared && projNameList.length === 0) {
+        exportFilename = "chatgpt_shared_conversations.json";
       }
       downloadFile(json, exportFilename, "application/json");
       log("DONE! " + successCount + " conversations, " + errorCount + " errors, ~" + sizeStr, "success");
@@ -1591,12 +1795,14 @@
 
       var endpoints = [
         {name: "custom_instructions", url: "https://chatgpt.com/backend-api/user_system_messages"},
-        {name: "settings", url: "https://chatgpt.com/backend-api/settings"}
+        {name: "settings", url: "https://chatgpt.com/backend-api/settings"},
+        {name: "beta_features", url: "https://chatgpt.com/backend-api/settings/beta_features"},
+        {name: "models", url: "https://chatgpt.com/backend-api/models"}
       ];
 
       var result = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.3",
+        tool: "GPT2Claude Migration Kit v2.4",
         data: {}
       };
 
@@ -1696,4 +1902,91 @@
   }
 
   log("Ready. Click a button to start exporting.");
+
+  // ========== CAMERA TOGGLE ==========
+  var cameraState = null; // null=unknown, true=on, false=off
+  async function toggleCamera() {
+    var btn = document.getElementById("g2c-camera-btn");
+    var note = document.getElementById("g2c-camera-note");
+    if (!btn) return;
+
+    btn.className = "g2c-tool-toggle checking";
+    btn.textContent = "\u2026";
+
+    try {
+      var token = await getToken();
+      var headers = {"Authorization": "Bearer " + token, "Content-Type": "application/json"};
+
+      // If we don't know current state, check first
+      if (cameraState === null) {
+        var checkResp = await fetch("https://chatgpt.com/backend-api/settings/beta_features", {
+          credentials: "include", headers: headers
+        });
+        if (checkResp.status === 200) {
+          var features = await checkResp.json();
+          cameraState = !!(features.video_screen_sharing);
+          log("Camera currently: " + (cameraState ? "ON" : "OFF"));
+        } else {
+          cameraState = false;
+          log("Beta features: HTTP " + checkResp.status + " (assuming off)");
+        }
+      }
+
+      // Toggle to opposite state
+      var newState = !cameraState;
+      var toggleResp = await fetch(
+        "https://chatgpt.com/backend-api/settings/beta_features?feature=video_screen_sharing&value=" + newState,
+        {method: "POST", credentials: "include", headers: headers}
+      );
+
+      if (toggleResp.status === 200) {
+        cameraState = newState;
+        btn.className = "g2c-tool-toggle" + (newState ? " on" : "");
+        btn.textContent = newState ? "ON" : "OFF";
+        log("Camera " + (newState ? "enabled" : "disabled"), "success");
+
+        if (note) {
+          note.style.display = "block";
+          note.textContent = newState
+            ? "\u2705 Enabled! Refresh the page (F5) to see the camera icon"
+            : "Disabled. Refresh the page to remove the camera icon";
+          setTimeout(function() {
+            if (note) note.style.display = "none";
+          }, 8000);
+        }
+      } else {
+        throw new Error("HTTP " + toggleResp.status);
+      }
+    } catch (err) {
+      btn.className = "g2c-tool-toggle";
+      btn.textContent = "Error";
+      log("Camera toggle failed: " + err.message, "error");
+      setTimeout(function() {
+        if (btn) btn.textContent = "Retry";
+      }, 2000);
+    }
+  }
+
+  // Auto-check camera state on load
+  (async function() {
+    try {
+      var btn = document.getElementById("g2c-camera-btn");
+      if (!btn) return;
+      var token = await getToken();
+      var headers = {"Authorization": "Bearer " + token};
+      var resp = await fetch("https://chatgpt.com/backend-api/settings/beta_features", {
+        credentials: "include", headers: headers
+      });
+      if (resp.status === 200) {
+        var features = await resp.json();
+        cameraState = !!(features.video_screen_sharing);
+        btn.className = "g2c-tool-toggle" + (cameraState ? " on" : "");
+        btn.textContent = cameraState ? "ON" : "OFF";
+      }
+    } catch (e) {
+      // silent — user can click to check manually
+    }
+  })();
+
+  safeAddEvent("g2c-camera-btn", "click", toggleCamera);
 })();
