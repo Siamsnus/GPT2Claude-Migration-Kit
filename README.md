@@ -12,11 +12,11 @@ Export everything from ChatGPT — memories, conversations, and custom instructi
 
 | Export | Description | Output file |
 |--------|-------------|-------------|
-| 🧠 **Memories** | Every fact ChatGPT memorized about you | `chatgpt_memories.md` |
-| 💬 **Conversations** | Every chat including projects, with full message history, timestamps, model info | `chatgpt_all_conversations.json` |
-| ⚙️ **Instructions** | Custom instructions and account settings | `chatgpt_instructions.json` |
+| 🧠 **Memories** | Every fact ChatGPT memorized about you, sorted by relevance (warm/cold) | `chatgpt_memories.md` |
+| 💬 **Conversations** | Every chat — main, projects, and shared — with full message history, timestamps, model info | `chatgpt_all_conversations.json` |
+| ⚙️ **Instructions** | Custom instructions, beta features, model config, and account settings | `chatgpt_instructions.json` |
 
-No existing browser extension exports memory items or custom instructions. This tool does.
+No existing browser extension exports memory items, shared conversations, or custom instructions. This tool does.
 
 ## Browse your export
 
@@ -30,6 +30,9 @@ Don't want to read raw JSON? Open **[viewer.html](https://siamsnus.github.io/GPT
 - Read conversations with rendered markdown and per-message model badges
 - Browse regenerated responses with ◀ 1/3 ▶ carousel (use arrow keys!)
 - Project conversations shown with project badge
+- Shared conversations shown with shared badge
+- Thinking/reasoning indicators from reasoning models
+- Tool use indicators (search queries, code execution)
 
 **🧠 Memories** — drag `chatgpt_memories.md`
 - Browse all memorized facts in a searchable list
@@ -41,18 +44,27 @@ Drop multiple files at once or load them one at a time — the viewer auto-detec
 
 ## How to use
 
-### Option A: Bookmarklet (easiest)
+### Option A: Bookmarklet (Chrome, Brave, Edge)
 1. Visit the [landing page](https://siamsnus.github.io/GPT2Claude-Migration-Kit)
 2. Drag the **GPT→Claude Export** button to your bookmark bar
 3. Go to [chatgpt.com](https://chatgpt.com) and log in
 4. Click the bookmark — a floating export panel appears
 5. Click the export buttons — files download automatically
 
-### Option B: Console paste (if bookmarklet doesn't work)
+### Option A2: Firefox bookmarklet
+Firefox has a ~67KB bookmark URL limit, so the full bookmarklet won't fit. Use the loader instead:
+1. Visit the [landing page](https://siamsnus.github.io/GPT2Claude-Migration-Kit) and click the **Firefox** tab
+2. Click **Copy bookmark URL** — this copies a tiny loader (~120 bytes) that fetches the latest script
+3. Right-click your bookmark bar → **Add Bookmark** → paste the URL → save
+4. Go to [chatgpt.com](https://chatgpt.com), log in, click your bookmark
+
+The Firefox loader always runs the current version from GitHub — no need to re-install after updates.
+
+### Option B: Console paste (any browser)
 1. Go to the [landing page](https://siamsnus.github.io/GPT2Claude-Migration-Kit) and click **"Copy full script to clipboard"**
 2. Go to [chatgpt.com](https://chatgpt.com) and log in
 3. Press `F12` → click **Console** tab
-4. Paste (`Ctrl+V`) and press Enter
+4. Paste (`Ctrl+V`) and press Enter (Firefox: type `allow pasting` first if prompted)
 5. The export panel appears on the page
 
 ## Importing to Claude
@@ -116,17 +128,23 @@ Claude has access to everything you imported. Ask it about any topic from your C
 The tool runs entirely in your browser using your existing ChatGPT login session. It calls the same internal API endpoints that the ChatGPT web app uses:
 
 - `/api/auth/session` — gets your session token
-- `/backend-api/memories` — fetches memory items
+- `/backend-api/memories` — fetches memory items (with warm/cold status)
 - `/backend-api/conversations` — lists all conversations
-- `/backend-api/conversation/{id}` — fetches full conversation detail
+- `/backend-api/conversations/batch` — fetches up to 10 conversations at once (~10x faster)
+- `/backend-api/conversation/{id}` — fetches full conversation detail (fallback)
+- `/backend-api/shared_conversations` — discovers publicly shared conversations
+- `/backend-api/share/{id}` — fetches shared conversation detail
+- `/backend-api/gizmos/{id}/conversations` — fetches project conversations
 - `/backend-api/user_system_messages` — fetches custom instructions
+- `/backend-api/settings/beta_features` — fetches/toggles beta feature flags
+- `/backend-api/models` — fetches available model configuration
 
 No data is sent anywhere. Files are saved directly to your Downloads folder.
 
 ## Requirements
 
 - A ChatGPT account (Free, Plus, Team, or Enterprise)
-- A modern browser (Chrome, Firefox, Edge, Brave)
+- A modern browser (Chrome, Brave, Edge — drag bookmarklet; Firefox — use loader or console paste)
 - That's it
 
 ## Limitations
@@ -134,7 +152,9 @@ No data is sent anywhere. Files are saved directly to your Downloads folder.
 - Uses undocumented OpenAI endpoints that may change without notice
 - Large accounts (1000+ conversations) may take 15-30 minutes
 - Large exports may need to be zipped before uploading to Claude (right-click → compress)
-- Rate limiting may occur — the tool handles this automatically with retry logic
+- Rate limiting may occur — the tool handles this automatically with graduated retry logic
+- Firefox bookmarklet uses a loader that fetches from GitHub (requires internet for first load)
+- Teams/Business/Enterprise accounts with workspace scoping may not work yet
 - This tool is not affiliated with OpenAI or Anthropic
 
 ## Why this exists
@@ -151,13 +171,23 @@ Everything runs in your browser — no data is sent anywhere.
 
 **Export:**
 - One-click export of all conversations, memories, and custom instructions
+- Batch download engine — fetches 10 conversations at a time (~10x faster)
+- Graduated retry: retry → split batch → individual fallback → resume batch
 - Smart download filters: filter by model, date range, count limit
+- Search filter: type a keyword to export only matching conversations
+- Shared conversations: discovers and exports publicly shared chats
 - Incremental export: load previous export to skip already-downloaded conversations
-- Time estimate before download
-- Project conversations included
+- Era presets: one-click date buttons for GPT-3.5 / GPT-4 / GPT-4o / GPT-5+ eras
+- Enhanced memory export with warm/cold status and token usage
+- Full profile export: custom instructions, beta features, model config
+- Desktop camera toggle: enable/disable webcam input on desktop ChatGPT
+- Project conversations included via multi-method discovery
 - Branch/regeneration data preserved
+- Reasoning model support: thinking blocks, reasoning recaps, 7 content types
+- Citation marker and image group stripping (OpenAI private-use Unicode)
 - Image references captured as placeholders
 - Rate limit handling with auto-retry
+- Time estimate before download
 
 **Viewer:**
 - Tabbed interface: 💬 Chats · 🧠 Memories · ⚙️ Settings
@@ -167,14 +197,20 @@ Everything runs in your browser — no data is sent anywhere.
 - Filter by model
 - Per-message model badges
 - Branch/regeneration carousel with keyboard nav
+- Thinking/reasoning indicators from reasoning models
+- Tool use indicators (search queries, code execution)
+- Project and shared conversation badges
 - Markdown rendering
-- Project badges
 - Works fully offline
 
 ## Planned features
 
-- **Image export** — Download images (uploaded photos, DALL-E generations) referenced in conversations. Currently the JSON contains image markers but not the actual files. PRs welcome.
+- **Teams/Business/Enterprise support** — Workspace-scoped accounts may see 0 conversations. Investigating `workspace_id` parameter.
+- **Project-scoped memory export** — OpenAI added siloed project memories. Export per-project memories to map to Claude Project instructions.
+- **Image export** — Download images (uploaded photos, DALL-E generations) referenced in conversations. Currently the JSON contains image markers but not the actual files.
+- **Browser extension** — Chrome/Firefox extension with auto-updates, toolbar icon, and no bookmarklet size limits.
 - **Import to other platforms** — Tested import prompts for Gemini, Copilot, etc.
+- **Statistics dashboard** — Model usage over time, conversation frequency chart in the viewer.
 
 ## Contributing
 
