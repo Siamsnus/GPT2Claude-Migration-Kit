@@ -676,13 +676,19 @@
         if (sharedResp.status === 200) {
           var sharedData = await sharedResp.json();
           var sharedItems = sharedData.items || [];
-          var totalShared = sharedData.total || sharedItems.length;
-          log("Shared: " + sharedItems.length + " fetched" + (totalShared > sharedItems.length ? " of " + totalShared + " total" : ""));
+          var lastPageSize = sharedItems.length;
+          log("Shared: " + sharedItems.length + " fetched (page 1)");
 
-          // Paginate if more
+          // Paginate if last page was full (more pages likely exist)
+          // Hard cap at 50 pages (5,000 items) to prevent runaway pagination
           var sharedOffset = sharedItems.length;
-          while (sharedItems.length >= 100) {
-            if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Shared: ' + sharedItems.length + (totalShared ? '/' + totalShared : '') + '\u2026';
+          var sharedPages = 1;
+          var maxSharedPages = 50;
+          var sharedSeenIds = {};
+          for (var si0 = 0; si0 < sharedItems.length; si0++) sharedSeenIds[sharedItems[si0].id] = true;
+
+          while (lastPageSize >= 100 && sharedPages < maxSharedPages) {
+            if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Shared: ' + sharedItems.length + ' fetched\u2026';
             var moreResp = await fetch(
               "https://chatgpt.com/backend-api/shared_conversations?order=updated&limit=100&offset=" + sharedOffset,
               {credentials: "include", headers: headers}
@@ -693,12 +699,33 @@
             }
             var moreData = await moreResp.json();
             var moreItems = moreData.items || [];
+            lastPageSize = moreItems.length;
             if (moreItems.length === 0) break;
-            for (var mi = 0; mi < moreItems.length; mi++) sharedItems.push(moreItems[mi]);
+
+            // Detect cycling — if we see IDs we already have, the API is looping
+            var dupeCount = 0;
+            for (var mi = 0; mi < moreItems.length; mi++) {
+              if (sharedSeenIds[moreItems[mi].id]) {
+                dupeCount++;
+              } else {
+                sharedSeenIds[moreItems[mi].id] = true;
+                sharedItems.push(moreItems[mi]);
+              }
+            }
             sharedOffset += moreItems.length;
-            if (moreData.total) totalShared = moreData.total;
-            log("Shared: " + sharedItems.length + (totalShared ? "/" + totalShared : "") + " fetched");
+            sharedPages++;
+
+            if (dupeCount > moreItems.length * 0.5) {
+              log("Shared: API returning duplicate items (" + dupeCount + "/" + moreItems.length + " dupes) — stopping");
+              break;
+            }
+
+            log("Shared: " + sharedItems.length + " unique fetched (page " + sharedPages + ")");
             await new Promise(function(r) { setTimeout(r, 500); });
+          }
+
+          if (sharedPages >= maxSharedPages) {
+            log("Shared: hit " + maxSharedPages + " page cap — stopping (" + sharedItems.length + " items)");
           }
 
           // Build index of existing conversation IDs for deduplication (id → array index)

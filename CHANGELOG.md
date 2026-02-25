@@ -66,8 +66,12 @@
 
 ### Shared Conversations Progress & Performance
 - Added progress logging during shared conversations scan — was silent "Checking shared conversations..." with no updates
-- Each page now logs: `Shared: 200/1500 fetched` with live status bar update
-- Fixed O(n²) dedup — tagging shared conversations in main list used linear scan per match, now O(1) hash map lookup
+- Each page now logs: `Shared: 200 unique fetched (page 3)` with live status bar update
+- Fixed infinite pagination loop — `while (sharedItems.length >= 100)` checked total count (always true after page 1), now checks last page size
+- Added cycle detection — if >50% of a page contains IDs already seen, stops pagination (API was returning duplicate/global items)
+- Added hard cap of 50 pages (5,000 items) to prevent runaway pagination
+- Inline dedup during fetch — duplicate shared items skipped before accumulating
+- Fixed O(n²) dedup for tagging shared items in main list — now O(1) hash map lookup
 - Better completion log: `Shared conversations: 500 found (3 unique, 497 already in main)`
 
 ### Log Output Fix
@@ -84,6 +88,6 @@
 - Firefox tab → console paste with dedicated copy button
 
 ## Stats
-- 1,699 → 2,046 lines (+347 lines, +20%)
+- 1,699 → 2,073 lines (+374 lines, +22%)
 - 12 features/fixes in this release
 - Syntax validated ✅
