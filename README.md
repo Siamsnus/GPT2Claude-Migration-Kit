@@ -14,7 +14,7 @@ Export everything from ChatGPT — memories, conversations, and custom instructi
 |--------|-------------|-------------|
 | 🧠 **Memories** | Every fact ChatGPT memorized about you, sorted by relevance (warm/cold) | `chatgpt_memories.md` |
 | 💬 **Conversations** | Every chat — main, projects, and shared — with full message history, timestamps, model info | `chatgpt_all_conversations.json` |
-| ⚙️ **Instructions** | Custom instructions, beta features, model config, and account settings | `chatgpt_instructions.json` |
+| ⚙️ **Instructions** | Custom instructions, beta features, model config, account info, Codex usage, compliance | `chatgpt_instructions.json` |
 
 No existing browser extension exports memory items, shared conversations, or custom instructions. This tool does.
 
@@ -137,6 +137,9 @@ The tool runs entirely in your browser using your existing ChatGPT login session
 - `/backend-api/user_system_messages` — fetches custom instructions
 - `/backend-api/settings/beta_features` — fetches/toggles beta feature flags
 - `/backend-api/models` — fetches available model configuration
+- `/backend-api/accounts/check/v4-2023-04-27` — detects account type, plan, workspace info
+- `/backend-api/codex/usage` — fetches Codex agent rate limits and credits
+- `/backend-api/compliance` — fetches registration country and compliance status
 
 No data is sent anywhere. Files are saved directly to your Downloads folder.
 
@@ -179,7 +182,10 @@ Everything runs in your browser — no data is sent anywhere.
 - Era presets: one-click date buttons for GPT-3.5 / GPT-4 / GPT-4o / GPT-5+ eras
 - Enhanced memory export with warm/cold status and token usage
 - Full profile export: custom instructions, beta features, model config
-- Desktop camera toggle: enable/disable webcam input on desktop ChatGPT
+- Account detection: plan type, workspace info, logged at startup
+- Expanded instructions export: account structure, Codex usage, compliance (7 endpoints)
+- Desktop camera toggle: enable/disable webcam input on desktop ChatGPT (Chromium only)
+- Conversation metadata: memory_scope and do-not-remember flags preserved
 - Project conversations included via multi-method discovery
 - Branch/regeneration data preserved
 - Reasoning model support: thinking blocks, reasoning recaps, 7 content types
@@ -204,7 +210,7 @@ Everything runs in your browser — no data is sent anywhere.
 
 ## Planned features
 
-- **Teams/Business/Enterprise support** — Workspace-scoped accounts may see 0 conversations. Investigating `workspace_id` parameter.
+- **Teams/Business/Enterprise support** — Account detection is implemented; workspace-scoped conversations still need testing with a Teams account volunteer.
 - **Project-scoped memory export** — OpenAI added siloed project memories. Export per-project memories to map to Claude Project instructions.
 - **Image export** — Download images (uploaded photos, DALL-E generations) referenced in conversations. Currently the JSON contains image markers but not the actual files.
 - **Browser extension** — Chrome/Firefox extension with auto-updates, toolbar icon, and no bookmarklet size limits.

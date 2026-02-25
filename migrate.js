@@ -172,7 +172,7 @@
       <div class="g2c-tool-row" id="g2c-camera-row">\
         <div class="g2c-tool-label">\
           <span class="icon">\uD83D\uDCF7</span>\
-          <span>Desktop Camera<span class="sub">Unlock webcam input on desktop</span></span>\
+          <span>Desktop Camera<span class="sub">Chromium only (Chrome, Brave, Edge)</span></span>\
         </div>\
         <button class="g2c-tool-toggle" id="g2c-camera-btn">Check</button>\
       </div>\
@@ -295,7 +295,51 @@
     }
     cachedToken = data.accessToken;
     log("Authenticated OK");
+    // Detect account type (async, non-blocking)
+    detectAccount(cachedToken);
     return cachedToken;
+  }
+
+  // Account detection — plan type, workspace info
+  var cachedAccountInfo = null;
+  async function detectAccount(token) {
+    if (cachedAccountInfo) return cachedAccountInfo;
+    try {
+      var resp = await fetch("https://chatgpt.com/backend-api/accounts/check/v4-2023-04-27", {
+        credentials: "include",
+        headers: {"Authorization": "Bearer " + token}
+      });
+      if (resp.status !== 200) {
+        log("Account check: HTTP " + resp.status);
+        return null;
+      }
+      var data = await resp.json();
+      var accounts = data.accounts || {};
+      var acctIds = Object.keys(accounts).filter(function(k) { return k !== "default"; });
+      if (acctIds.length === 0) return null;
+      var primary = accounts[acctIds[0]];
+      var acct = primary.account || {};
+      cachedAccountInfo = {
+        account_id: acct.account_id || acctIds[0],
+        plan_type: acct.plan_type || "unknown",
+        structure: acct.structure || "unknown",
+        workspace_type: acct.workspace_type || null,
+        organization_id: acct.organization_id || null,
+        is_hipaa: acct.is_hipaa_compliant_workspace || false,
+        features: primary.features || []
+      };
+      var label = cachedAccountInfo.plan_type.charAt(0).toUpperCase() + cachedAccountInfo.plan_type.slice(1);
+      var structLabel = cachedAccountInfo.structure === "personal" ? "personal" : cachedAccountInfo.structure;
+      if (cachedAccountInfo.workspace_type) structLabel += "/" + cachedAccountInfo.workspace_type;
+      log("Account: " + label + " (" + structLabel + ")");
+      if (cachedAccountInfo.structure !== "personal" && cachedAccountInfo.workspace_type) {
+        log("Workspace detected: " + cachedAccountInfo.workspace_type, "success");
+      }
+      return cachedAccountInfo;
+    } catch (e) {
+      log("Account detection: " + e.message);
+      return null;
+    }
   }
 
   // Extract model from conversation metadata — tries multiple field names
@@ -1226,6 +1270,8 @@
       model: model,
       project: (listItem && listItem._project) || null,
       project_id: (listItem && listItem._project_id) || null,
+      memory_scope: (listItem && listItem.memory_scope) || null,
+      is_do_not_remember: (listItem && listItem.is_do_not_remember) || false,
       has_branches: hasBranches,
       message_count: messages.length,
       messages: messages
@@ -1332,6 +1378,7 @@
         export_date: new Date().toISOString(),
         tool: "GPT2Claude Migration Kit v2.4",
         format_version: 4,
+        account: cachedAccountInfo || null,
         total_conversations: filtered.length,
         conversations: []
       };
@@ -1797,7 +1844,10 @@
         {name: "custom_instructions", url: "https://chatgpt.com/backend-api/user_system_messages"},
         {name: "settings", url: "https://chatgpt.com/backend-api/settings"},
         {name: "beta_features", url: "https://chatgpt.com/backend-api/settings/beta_features"},
-        {name: "models", url: "https://chatgpt.com/backend-api/models"}
+        {name: "models", url: "https://chatgpt.com/backend-api/models"},
+        {name: "account", url: "https://chatgpt.com/backend-api/accounts/check/v4-2023-04-27"},
+        {name: "codex_usage", url: "https://chatgpt.com/backend-api/codex/usage"},
+        {name: "compliance", url: "https://chatgpt.com/backend-api/compliance"}
       ];
 
       var result = {
