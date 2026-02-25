@@ -156,9 +156,10 @@
         </div>
         <div class="install-step"><div class="install-step-num">3</div>
           <div>
-            <p>Click the button below to copy the bookmark URL:</p>
+            <p>Click the button below to copy the loader URL:</p>
             <button class="action-btn" id="copy-bookmark-url" style="margin-top:0.5rem;">📋 Copy bookmark URL</button>
             <p class="copy-confirm" id="copy-url-confirm">✅ Copied! Now paste it into the URL field.</p>
+            <p style="font-size:0.75rem; color:#666; margin-top:0.5rem;">ℹ️ This is a tiny loader (~120 bytes) that fetches the latest script from GitHub — it always runs the current version.</p>
           </div>
         </div>
         <div class="install-step"><div class="install-step-num">4</div>
@@ -2338,12 +2339,12 @@ function showTab(name) {
   if (labels[name] !== undefined) btns[labels[name]].classList.add("active");
 }
 
-// Copy bookmark URL (for Firefox)
+// Copy bookmark URL (for Firefox — tiny loader that fetches from GitHub)
 var copyUrlBtn = document.getElementById("copy-bookmark-url");
 if (copyUrlBtn) {
   copyUrlBtn.addEventListener("click", function() {
-    var href = document.getElementById("bookmarklet-btn").getAttribute("href");
-    navigator.clipboard.writeText(href).then(function() {
+    var loaderUrl = "javascript:void(fetch('https://raw.githubusercontent.com/Siamsnus/GPT2Claude-Migration-Kit/main/migrate.js').then(r=>r.text()).then(eval))";
+    navigator.clipboard.writeText(loaderUrl).then(function() {
       document.getElementById("copy-url-confirm").style.display = "block";
       copyUrlBtn.innerHTML = "✅ Copied!";
       setTimeout(function() {

@@ -28,6 +28,20 @@
 - Captures personality traits, disabled tools, and feature flags
 - Gives Claude complete context about your ChatGPT setup
 
+### 📷 Desktop Camera Toggle
+- One-click toggle to enable/disable webcam input on desktop ChatGPT
+- Reads current `video_screen_sharing` beta flag state on panel load
+- Toggles via `POST /backend-api/settings/beta_features?feature=video_screen_sharing`
+- Status indicator shows ON/OFF with color coding
+- Instruction note after toggle: "Refresh the page (F5) to see the camera icon"
+- Hides during scan/filter mode to avoid UI clutter
+
+### 🦊 Firefox Loader Bookmarklet
+- Full bookmarklet (93KB) exceeds Firefox's ~67KB bookmark URL limit
+- Firefox tab now uses a tiny loader (~120 bytes) that fetches the latest script from GitHub
+- Loader always runs the current version — no need to re-drag after updates
+- Chrome/Brave continue using the full inline bookmarklet as before
+
 ## Bug Fixes
 
 ### Log Output Fix
@@ -41,8 +55,9 @@
 - Export `format_version` → 4
 - Memory export header → v2.4
 - Instructions export header → v2.4
+- Firefox tab → loader bookmarklet (fetches from GitHub)
 
 ## Stats
-- 1,699 → 1,887 lines (+188 lines, +11%)
-- 6 features/fixes in this release
+- 1,699 → 1,992 lines (+293 lines, +17%)
+- 8 features/fixes in this release
 - Syntax validated ✅
