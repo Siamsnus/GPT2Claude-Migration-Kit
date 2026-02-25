@@ -143,35 +143,27 @@
     <!-- FIREFOX TAB -->
     <div class="tab-content" id="tab-firefox">
       <div class="install-steps">
-        <div class="install-step"><div class="install-step-num">1</div>
+        <div class="install-step"><div class="install-step-num">⚠️</div>
           <div>
-            <p>Right-click your <strong>bookmark bar</strong> → click <strong>"Add Bookmark..."</strong></p>
-            <p style="font-size:0.8rem; color:#555; margin-top:0.25rem;">No bookmark bar? Press Ctrl+Shift+B to show it</p>
+            <p>Firefox can't use the bookmarklet — it exceeds Firefox's 65KB bookmark URL limit, and ChatGPT's security policy blocks external script loading. <strong>Use console paste instead:</strong></p>
           </div>
         </div>
-        <div class="install-step"><div class="install-step-num">2</div>
-          <div>
-            <p>Set the <strong>Name</strong> to: <strong style="color:var(--accent);">GPT→Claude Export</strong></p>
-          </div>
-        </div>
+        <div class="install-step"><div class="install-step-num">1</div><p>Go to <a href="https://chatgpt.com" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;">chatgpt.com</a> and log in</p></div>
+        <div class="install-step"><div class="install-step-num">2</div><p>Press <strong>F12</strong> on your keyboard → click the <strong>Console</strong> tab</p></div>
         <div class="install-step"><div class="install-step-num">3</div>
           <div>
-            <p>Click the button below to copy the loader URL:</p>
-            <button class="action-btn" id="copy-bookmark-url" style="margin-top:0.5rem;">📋 Copy bookmark URL</button>
-            <p class="copy-confirm" id="copy-url-confirm">✅ Copied! Now paste it into the URL field.</p>
-            <p style="font-size:0.75rem; color:#666; margin-top:0.5rem;">ℹ️ This is a tiny loader (~120 bytes) that fetches the latest script from GitHub — it always runs the current version.</p>
+            <p>If Firefox warns about pasting, type <strong>allow pasting</strong> and press Enter first</p>
           </div>
         </div>
         <div class="install-step"><div class="install-step-num">4</div>
           <div>
-            <p>Paste (<strong>Ctrl+V</strong>) into the <strong>Location (URL)</strong> field → click <strong>Save</strong></p>
+            <p>Click the button below to copy the export script:</p>
+            <button class="action-btn" id="copy-firefox-script" style="margin-top:0.5rem;">📋 Copy export script</button>
+            <p class="copy-confirm" id="copy-firefox-confirm">✅ Copied! Now paste into the console.</p>
           </div>
         </div>
-        <div class="install-step"><div class="install-step-num">5</div>
-          <div>
-            <p>Go to <a href="https://chatgpt.com" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;">chatgpt.com</a>, log in, click your new bookmark. The export panel appears!</p>
-          </div>
-        </div>
+        <div class="install-step"><div class="install-step-num">5</div><p>Click inside the console, press <strong>Ctrl+V</strong> to paste, then press <strong>Enter</strong></p></div>
+        <div class="install-step"><div class="install-step-num">6</div><p>The export panel appears on the ChatGPT page. Click the buttons to export.</p></div>
       </div>
     </div>
 
@@ -2339,17 +2331,17 @@ function showTab(name) {
   if (labels[name] !== undefined) btns[labels[name]].classList.add("active");
 }
 
-// Copy bookmark URL (for Firefox — tiny loader that fetches from GitHub)
-var copyUrlBtn = document.getElementById("copy-bookmark-url");
+// Copy script for Firefox (same as console paste)
+var copyUrlBtn = document.getElementById("copy-firefox-script");
 if (copyUrlBtn) {
   copyUrlBtn.addEventListener("click", function() {
-    var loaderUrl = "javascript:void(fetch('https://raw.githubusercontent.com/Siamsnus/GPT2Claude-Migration-Kit/main/migrate.js').then(r=>r.text()).then(eval))";
-    navigator.clipboard.writeText(loaderUrl).then(function() {
-      document.getElementById("copy-url-confirm").style.display = "block";
+    var code = document.getElementById("migrate-source").textContent.trim();
+    navigator.clipboard.writeText(code).then(function() {
+      document.getElementById("copy-firefox-confirm").style.display = "block";
       copyUrlBtn.innerHTML = "✅ Copied!";
       setTimeout(function() {
-        copyUrlBtn.innerHTML = "📋 Copy bookmark URL";
-        document.getElementById("copy-url-confirm").style.display = "none";
+        copyUrlBtn.innerHTML = "📋 Copy export script";
+        document.getElementById("copy-firefox-confirm").style.display = "none";
       }, 4000);
     });
   });

@@ -51,14 +51,13 @@ Drop multiple files at once or load them one at a time — the viewer auto-detec
 4. Click the bookmark — a floating export panel appears
 5. Click the export buttons — files download automatically
 
-### Option A2: Firefox bookmarklet
-Firefox has a ~67KB bookmark URL limit, so the full bookmarklet won't fit. Use the loader instead:
+### Option A2: Firefox
+Firefox can't use the bookmarklet (exceeds Firefox's 65KB URL limit) and ChatGPT's Content Security Policy blocks external script loading. Use console paste instead:
 1. Visit the [landing page](https://siamsnus.github.io/GPT2Claude-Migration-Kit) and click the **Firefox** tab
-2. Click **Copy bookmark URL** — this copies a tiny loader (~120 bytes) that fetches the latest script
-3. Right-click your bookmark bar → **Add Bookmark** → paste the URL → save
-4. Go to [chatgpt.com](https://chatgpt.com), log in, click your bookmark
-
-The Firefox loader always runs the current version from GitHub — no need to re-install after updates.
+2. Go to [chatgpt.com](https://chatgpt.com) and log in
+3. Press `F12` → click **Console** tab
+4. If Firefox warns about pasting, type `allow pasting` and press Enter
+5. Click **Copy export script** on the landing page, paste into console, press Enter
 
 ### Option B: Console paste (any browser)
 1. Go to the [landing page](https://siamsnus.github.io/GPT2Claude-Migration-Kit) and click **"Copy full script to clipboard"**
@@ -144,7 +143,7 @@ No data is sent anywhere. Files are saved directly to your Downloads folder.
 ## Requirements
 
 - A ChatGPT account (Free, Plus, Team, or Enterprise)
-- A modern browser (Chrome, Brave, Edge — drag bookmarklet; Firefox — use loader or console paste)
+- A modern browser (Chrome, Brave, Edge — drag bookmarklet; Firefox — console paste)
 - That's it
 
 ## Limitations
@@ -153,7 +152,7 @@ No data is sent anywhere. Files are saved directly to your Downloads folder.
 - Large accounts (1000+ conversations) may take 15-30 minutes
 - Large exports may need to be zipped before uploading to Claude (right-click → compress)
 - Rate limiting may occur — the tool handles this automatically with graduated retry logic
-- Firefox bookmarklet uses a loader that fetches from GitHub (requires internet for first load)
+- Firefox can't use the bookmarklet (65KB URL limit + CSP blocks external fetch) — use console paste instead
 - Teams/Business/Enterprise accounts with workspace scoping may not work yet
 - This tool is not affiliated with OpenAI or Anthropic
 

@@ -36,11 +36,11 @@
 - Instruction note after toggle: "Refresh the page (F5) to see the camera icon"
 - Hides during scan/filter mode to avoid UI clutter
 
-### 🦊 Firefox Loader Bookmarklet
-- Full bookmarklet (93KB) exceeds Firefox's ~67KB bookmark URL limit
-- Firefox tab now uses a tiny loader (~120 bytes) that fetches the latest script from GitHub
-- Loader always runs the current version — no need to re-drag after updates
-- Chrome/Brave continue using the full inline bookmarklet as before
+### 🦊 Firefox Console Paste
+- Full bookmarklet (93KB) exceeds Firefox's ~65KB bookmark URL limit
+- External script loader blocked by ChatGPT's Content-Security-Policy (`connect-src` whitelist)
+- Firefox tab now directs users to console paste method with dedicated copy button
+- Includes `allow pasting` instruction for Firefox's paste protection
 
 ## Bug Fixes
 
@@ -55,7 +55,7 @@
 - Export `format_version` → 4
 - Memory export header → v2.4
 - Instructions export header → v2.4
-- Firefox tab → loader bookmarklet (fetches from GitHub)
+- Firefox tab → console paste with dedicated copy button
 
 ## Stats
 - 1,699 → 1,992 lines (+293 lines, +17%)
