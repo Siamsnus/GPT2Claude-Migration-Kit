@@ -676,45 +676,49 @@
         if (sharedResp.status === 200) {
           var sharedData = await sharedResp.json();
           var sharedItems = sharedData.items || [];
-          var totalShared = sharedItems.length;
+          var totalShared = sharedData.total || sharedItems.length;
+          log("Shared: " + sharedItems.length + " fetched" + (totalShared > sharedItems.length ? " of " + totalShared + " total" : ""));
 
           // Paginate if more
           var sharedOffset = sharedItems.length;
           while (sharedItems.length >= 100) {
+            if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Shared: ' + sharedItems.length + (totalShared ? '/' + totalShared : '') + '\u2026';
             var moreResp = await fetch(
               "https://chatgpt.com/backend-api/shared_conversations?order=updated&limit=100&offset=" + sharedOffset,
               {credentials: "include", headers: headers}
             );
-            if (moreResp.status !== 200) break;
+            if (moreResp.status !== 200) {
+              log("Shared page HTTP " + moreResp.status + " — stopping pagination");
+              break;
+            }
             var moreData = await moreResp.json();
             var moreItems = moreData.items || [];
             if (moreItems.length === 0) break;
             for (var mi = 0; mi < moreItems.length; mi++) sharedItems.push(moreItems[mi]);
             sharedOffset += moreItems.length;
-            totalShared = sharedItems.length;
+            if (moreData.total) totalShared = moreData.total;
+            log("Shared: " + sharedItems.length + (totalShared ? "/" + totalShared : "") + " fetched");
             await new Promise(function(r) { setTimeout(r, 500); });
           }
 
-          // Build index of existing conversation IDs for deduplication
-          var existingIds = {};
+          // Build index of existing conversation IDs for deduplication (id → array index)
+          var existingIdIdx = {};
           for (var ei = 0; ei < scannedConvos.length; ei++) {
-            existingIds[scannedConvos[ei].id] = true;
+            existingIdIdx[scannedConvos[ei].id] = ei;
           }
 
           var newShared = 0;
+          var taggedShared = 0;
           for (var si = 0; si < sharedItems.length; si++) {
             var shared = sharedItems[si];
             // Shared items might have conversation_id linking to a regular conversation
             var sharedConvoId = shared.conversation_id || shared.id;
-            if (existingIds[sharedConvoId]) {
-              // Already in main list — tag it as shared but don't duplicate
-              for (var ti = 0; ti < scannedConvos.length; ti++) {
-                if (scannedConvos[ti].id === sharedConvoId) {
-                  scannedConvos[ti]._also_shared = true;
-                  scannedConvos[ti]._share_id = shared.share_id || shared.id;
-                  break;
-                }
-              }
+            if (existingIdIdx[sharedConvoId] !== undefined) {
+              // Already in main list — tag it as shared using index lookup (O(1))
+              var tagIdx = existingIdIdx[sharedConvoId];
+              scannedConvos[tagIdx]._also_shared = true;
+              scannedConvos[tagIdx]._share_id = shared.share_id || shared.id;
+              taggedShared++;
             } else {
               // New shared conversation — add to scan list
               shared._shared = true;
@@ -725,8 +729,8 @@
             }
           }
 
-          if (totalShared > 0) {
-            log("Shared conversations: " + totalShared + " found (" + newShared + " unique)");
+          if (sharedItems.length > 0) {
+            log("Shared conversations: " + sharedItems.length + " found (" + newShared + " unique, " + taggedShared + " already in main)");
           } else {
             log("No shared conversations");
           }

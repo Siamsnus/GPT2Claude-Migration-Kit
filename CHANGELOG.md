@@ -64,6 +64,12 @@
 
 ## Bug Fixes
 
+### Shared Conversations Progress & Performance
+- Added progress logging during shared conversations scan — was silent "Checking shared conversations..." with no updates
+- Each page now logs: `Shared: 200/1500 fetched` with live status bar update
+- Fixed O(n²) dedup — tagging shared conversations in main list used linear scan per match, now O(1) hash map lookup
+- Better completion log: `Shared conversations: 500 found (3 unique, 497 already in main)`
+
 ### Log Output Fix
 - Fixed missing visual separation between log entries
 - "No projects foundReady." → proper line breaks with 1px padding
@@ -78,6 +84,6 @@
 - Firefox tab → console paste with dedicated copy button
 
 ## Stats
-- 1,699 → 2,042 lines (+343 lines, +20%)
-- 11 features/fixes in this release
+- 1,699 → 2,046 lines (+347 lines, +20%)
+- 12 features/fixes in this release
 - Syntax validated ✅
