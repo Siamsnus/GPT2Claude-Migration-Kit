@@ -16,6 +16,8 @@ Export everything from ChatGPT — memories, conversations, and custom instructi
 | 💬 **Conversations** | Every chat — main, archived, projects, and shared — with full message history, timestamps, model info | `chatgpt_all_conversations.json` |
 | ⚙️ **Instructions** | Custom instructions, beta features, model config, account info, Codex usage, compliance | `chatgpt_instructions.json` |
 
+**Smart filenames:** If you use the source filter to export only a subset, the filename adapts: `chatgpt_archived_conversations.json`, `chatgpt_shared_conversations.json`, `chatgpt_project_investing.json`, etc.
+
 No existing browser extension exports memory items, shared conversations, or custom instructions. This tool does.
 
 ## Browse your export
