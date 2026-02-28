@@ -1,4 +1,4 @@
-// GPT2Claude Migration Kit v2.4
+// GPT2Claude Migration Kit v2.5
 // https://github.com/Siamsnus/GPT2Claude-Migration-Kit
 // Exports ChatGPT memories, conversations, and instructions
 // No data leaves your browser - everything runs locally
@@ -135,7 +135,7 @@
     <div class="g2c-header g2c-drag-handle">\
       <div>\
         <div class="g2c-title"><span class="gpt">GPT</span><span class="arrow">\u2192</span><span class="claude">Claude</span></div>\
-        <div class="g2c-version">Migration Kit v2.4</div>\
+        <div class="g2c-version">Migration Kit v2.5</div>\
       </div>\
       <button class="g2c-close" id="g2c-close">\u00D7</button>\
     </div>\
@@ -383,7 +383,7 @@
       var memories = data.memories || data.results || data;
       var md = "# ChatGPT Memory Export\n";
       md += "# Exported: " + new Date().toISOString() + "\n";
-      md += "# Tool: GPT2Claude Migration Kit v2.4\n";
+      md += "# Tool: GPT2Claude Migration Kit v2.5\n";
       if (data.memory_num_tokens) md += "# Tokens used: " + data.memory_num_tokens + " / " + (data.memory_max_tokens || "?") + "\n";
       md += "\n";
 
@@ -773,6 +773,75 @@
         log("Shared conversations check: " + sharedErr.message + " (continuing without)");
       }
 
+      // Discover archived conversations
+      try {
+        log("Checking archived conversations...");
+        var statusEl = document.getElementById("g2c-scan-status");
+        if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Checking archived conversations\u2026';
+
+        var archivedItems = [];
+        var archivedOffset = 0;
+        var archivedPage = 0;
+
+        while (true) {
+          archivedPage++;
+          var archivedResp = await fetch(
+            "https://chatgpt.com/backend-api/conversations?is_archived=true&limit=100&offset=" + archivedOffset,
+            {credentials: "include", headers: headers}
+          );
+          if (archivedResp.status !== 200) {
+            if (archivedPage === 1) log("Archived conversations: HTTP " + archivedResp.status + " (skipped)");
+            break;
+          }
+          var archivedData = await archivedResp.json();
+          var archivedPageItems = archivedData.items || [];
+          if (archivedPageItems.length === 0) break;
+
+          for (var ai = 0; ai < archivedPageItems.length; ai++) {
+            archivedPageItems[ai]._archived = true;
+            archivedItems.push(archivedPageItems[ai]);
+          }
+
+          if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Archived: ' + archivedItems.length + ' fetched\u2026';
+          log("Archived: " + archivedItems.length + " fetched (page " + archivedPage + ")");
+
+          if (archivedPageItems.length < 100) break;
+          archivedOffset += archivedPageItems.length;
+          await new Promise(function(r) { setTimeout(r, 500); });
+        }
+
+        if (archivedItems.length > 0) {
+          // Deduplicate against main scan list
+          var existingIdArchive = {};
+          for (var eai = 0; eai < scannedConvos.length; eai++) {
+            existingIdArchive[scannedConvos[eai].id] = eai;
+          }
+
+          var newArchived = 0;
+          var taggedArchived = 0;
+          for (var ari = 0; ari < archivedItems.length; ari++) {
+            var archItem = archivedItems[ari];
+            if (existingIdArchive[archItem.id] !== undefined) {
+              // Already in main list — tag it as archived
+              var archIdx = existingIdArchive[archItem.id];
+              scannedConvos[archIdx]._archived = true;
+              taggedArchived++;
+            } else {
+              scannedConvos.push(archItem);
+              newArchived++;
+            }
+          }
+
+          log("Archived conversations: " + archivedItems.length + " found (" + newArchived + " new, " + taggedArchived + " already in main)");
+          var countEl = document.getElementById("g2c-scan-count");
+          if (countEl) countEl.textContent = scannedConvos.length.toLocaleString();
+        } else {
+          log("No archived conversations");
+        }
+      } catch (archiveErr) {
+        log("Archived conversations check: " + archiveErr.message + " (continuing without)");
+      }
+
       // Show filter panel
       setButtonState(btn, "done", scannedConvos.length + " conversations found");
 
@@ -806,7 +875,7 @@
       if (t > 0 && t < oldest) oldest = t;
       if (t > 0 && t > newest) newest = t;
       // Track source
-      var src = c._shared ? "Shared conversations" : (c._project || "Main conversations");
+      var src = c._archived ? "Archived" : (c._shared ? "Shared conversations" : (c._project || "Main conversations"));
       sources[src] = (sources[src] || 0) + 1;
     }
     var modelKeys = Object.keys(models).sort(function(a, b) { return models[b] - models[a]; });
@@ -834,25 +903,36 @@
     var sourceKeys = Object.keys(sources).sort(function(a, b) {
       if (a === "Main conversations") return -1;
       if (b === "Main conversations") return 1;
+      if (a === "Archived") return 1;
+      if (b === "Archived") return -1;
       return sources[b] - sources[a];
     });
     var sourceCheckboxes = "";
     var hasProjects = sourceKeys.length > 1;
     for (var si = 0; si < sourceKeys.length; si++) {
       var sk = sourceKeys[si];
-      var icon = sk === "Main conversations" ? "\uD83D\uDCAC" : (sk === "Shared conversations" ? "\uD83D\uDD17" : "\uD83D\uDCC1");
+      var icon = sk === "Main conversations" ? "\uD83D\uDCAC" : (sk === "Shared conversations" ? "\uD83D\uDD17" : (sk === "Archived" ? "\uD83D\uDCE6" : "\uD83D\uDCC1"));
       sourceCheckboxes += '<label class="g2c-model-row"><input type="checkbox" checked data-source="' + sk + '"> ' + icon + ' ' + sk + '<span class="cnt">' + sources[sk] + '</span></label>';
     }
 
-    // Scan summary — show project breakdown if applicable
-    var projCount = sourceKeys.length - 1;
+    // Scan summary — show breakdown if applicable
+    var projCount = 0;
     var projConvoCount = scannedConvos.filter(function(c) { return c._project; }).length;
-    var mainCount = scannedConvos.length - projConvoCount;
+    var archivedCount = scannedConvos.filter(function(c) { return c._archived; }).length;
+    var sharedOnlyCount = scannedConvos.filter(function(c) { return c._shared; }).length;
+    for (var ski = 0; ski < sourceKeys.length; ski++) {
+      if (sourceKeys[ski] !== "Main conversations" && sourceKeys[ski] !== "Shared conversations" && sourceKeys[ski] !== "Archived") projCount++;
+    }
+    var mainCount = scannedConvos.length - projConvoCount - archivedCount - sharedOnlyCount;
     var scanSummaryText = scannedConvos.length.toLocaleString() + '</span>' +
       '<span style="font-size:12px;color:#888;"> conversations scanned</span>';
-    if (projCount > 0) {
-      scanSummaryText += '<div style="font-size:11px;color:#7eb8a0;margin-top:4px;">' +
-        mainCount.toLocaleString() + ' main + ' + projConvoCount + ' from ' + projCount + ' project' + (projCount > 1 ? 's' : '') + '</div>';
+    var breakdownParts = [];
+    if (mainCount > 0) breakdownParts.push(mainCount.toLocaleString() + ' main');
+    if (archivedCount > 0) breakdownParts.push(archivedCount + ' archived');
+    if (projConvoCount > 0) breakdownParts.push(projConvoCount + ' from ' + projCount + ' project' + (projCount > 1 ? 's' : ''));
+    if (sharedOnlyCount > 0) breakdownParts.push(sharedOnlyCount + ' shared');
+    if (breakdownParts.length > 1) {
+      scanSummaryText += '<div style="font-size:11px;color:#7eb8a0;margin-top:4px;">' + breakdownParts.join(' + ') + '</div>';
     }
     var scanSummary = '<div style="text-align:center;margin-bottom:14px;">' +
       '<span style="font-size:28px;font-weight:800;color:#7eb8a0;">' + scanSummaryText +
@@ -1077,7 +1157,7 @@
 
         // Source filter
         if (hasSourceFilter) {
-          var src = c._shared ? "Shared conversations" : (c._project || "Main conversations");
+          var src = c._archived ? "Archived" : (c._shared ? "Shared conversations" : (c._project || "Main conversations"));
           if (!selectedSources[src]) continue;
         }
 
@@ -1301,6 +1381,7 @@
       model: model,
       project: (listItem && listItem._project) || null,
       project_id: (listItem && listItem._project_id) || null,
+      archived: (listItem && listItem._archived) || false,
       memory_scope: (listItem && listItem.memory_scope) || null,
       is_do_not_remember: (listItem && listItem.is_do_not_remember) || false,
       has_branches: hasBranches,
@@ -1407,8 +1488,8 @@
 
       var fullExport = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.4",
-        format_version: 4,
+        tool: "GPT2Claude Migration Kit v2.5",
+        format_version: 5,
         account: cachedAccountInfo || null,
         total_conversations: filtered.length,
         conversations: []
@@ -1766,9 +1847,12 @@
       var projectNames = {};
       var hasMain = false;
       var hasShared = false;
+      var hasArchived = false;
       for (var fi = 0; fi < fullExport.conversations.length; fi++) {
         if (fullExport.conversations[fi].shared) {
           hasShared = true;
+        } else if (fullExport.conversations[fi].archived) {
+          hasArchived = true;
         } else if (fullExport.conversations[fi].project) {
           projectNames[fullExport.conversations[fi].project] = true;
         } else {
@@ -1776,13 +1860,15 @@
         }
       }
       var projNameList = Object.keys(projectNames);
-      if (!hasMain && !hasShared && projNameList.length === 1) {
+      if (!hasMain && !hasShared && !hasArchived && projNameList.length === 1) {
         // Only one project exported
         exportFilename = "chatgpt_project_" + projNameList[0].toLowerCase().replace(/[^a-z0-9]+/g, "_") + ".json";
-      } else if (!hasMain && !hasShared && projNameList.length > 1) {
+      } else if (!hasMain && !hasShared && !hasArchived && projNameList.length > 1) {
         exportFilename = "chatgpt_projects.json";
-      } else if (!hasMain && hasShared && projNameList.length === 0) {
+      } else if (!hasMain && hasShared && !hasArchived && projNameList.length === 0) {
         exportFilename = "chatgpt_shared_conversations.json";
+      } else if (!hasMain && !hasShared && hasArchived && projNameList.length === 0) {
+        exportFilename = "chatgpt_archived_conversations.json";
       }
       downloadFile(json, exportFilename, "application/json");
       log("DONE! " + successCount + " conversations, " + errorCount + " errors, ~" + sizeStr, "success");
@@ -1883,7 +1969,7 @@
 
       var result = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.4",
+        tool: "GPT2Claude Migration Kit v2.5",
         data: {}
       };
 

@@ -1,3 +1,42 @@
+# v2.5 Changelog
+
+## New Features
+
+### 📦 Archived Conversations Export
+- Scans `/conversations?is_archived=true` endpoint to discover archived conversations
+- Paginated scan with progress logging: `Archived: 24 fetched (page 1)`
+- Deduplication: archived conversations already in main list are tagged, not duplicated
+- Appears as "📦 Archived" in the source filter panel
+- Smart filename: `chatgpt_archived_conversations.json` when exporting only archived
+- `archived: true` flag preserved in export JSON per conversation
+- Resolves reports of 50%+ missing conversations from users who archive aggressively
+
+### 📊 Improved Scan Summary
+- Breakdown now shows all source categories: "3,373 main + 24 archived + 1 from 1 project + 3 shared"
+- Only shown when multiple sources detected
+
+## Bug Fixes
+
+### Archived Conversations Were Silently Excluded
+- Root cause: default `/conversations` endpoint excludes archived conversations without any indication
+- The `total` field in API responses is unreliable (returns page count, not grand total)
+- Discovery: `is_archived` field exists on every conversation object but was never checked
+- Two user reports confirmed the gap: ~600 missing (KylieKat17) and ~950 missing (Actual-Air1296)
+
+## Version Bumps
+- `migrate.js` header → v2.5
+- Panel UI badge → v2.5
+- Export JSON `tool` field → v2.5
+- Export `format_version` → 5
+- Memory export header → v2.5
+- Instructions export header → v2.5
+
+## Stats
+- 2,073 → 2,159 lines (+86 lines, +4%)
+- Syntax validated ✅
+
+---
+
 # v2.4 Changelog
 
 ## New Features

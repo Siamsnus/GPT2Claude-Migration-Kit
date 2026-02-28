@@ -13,7 +13,7 @@ Export everything from ChatGPT — memories, conversations, and custom instructi
 | Export | Description | Output file |
 |--------|-------------|-------------|
 | 🧠 **Memories** | Every fact ChatGPT memorized about you, sorted by relevance (warm/cold) | `chatgpt_memories.md` |
-| 💬 **Conversations** | Every chat — main, projects, and shared — with full message history, timestamps, model info | `chatgpt_all_conversations.json` |
+| 💬 **Conversations** | Every chat — main, archived, projects, and shared — with full message history, timestamps, model info | `chatgpt_all_conversations.json` |
 | ⚙️ **Instructions** | Custom instructions, beta features, model config, account info, Codex usage, compliance | `chatgpt_instructions.json` |
 
 No existing browser extension exports memory items, shared conversations, or custom instructions. This tool does.
@@ -31,6 +31,7 @@ Don't want to read raw JSON? Open **[viewer.html](https://siamsnus.github.io/GPT
 - Browse regenerated responses with ◀ 1/3 ▶ carousel (use arrow keys!)
 - Project conversations shown with project badge
 - Shared conversations shown with shared badge
+- Archived conversations shown with archived badge
 - Thinking/reasoning indicators from reasoning models
 - Tool use indicators (search queries, code execution)
 
@@ -129,6 +130,7 @@ The tool runs entirely in your browser using your existing ChatGPT login session
 - `/api/auth/session` — gets your session token
 - `/backend-api/memories` — fetches memory items (with warm/cold status)
 - `/backend-api/conversations` — lists all conversations
+- `/backend-api/conversations?is_archived=true` — lists archived conversations
 - `/backend-api/conversations/batch` — fetches up to 10 conversations at once (~10x faster)
 - `/backend-api/conversation/{id}` — fetches full conversation detail (fallback)
 - `/backend-api/shared_conversations` — discovers publicly shared conversations
@@ -178,6 +180,7 @@ Everything runs in your browser — no data is sent anywhere.
 - Smart download filters: filter by model, date range, count limit
 - Search filter: type a keyword to export only matching conversations
 - Shared conversations: discovers and exports publicly shared chats
+- Archived conversations: discovers and exports archived chats separately
 - Incremental export: load previous export to skip already-downloaded conversations
 - Era presets: one-click date buttons for GPT-3.5 / GPT-4 / GPT-4o / GPT-5+ eras
 - Enhanced memory export with warm/cold status and token usage
