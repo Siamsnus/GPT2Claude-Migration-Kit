@@ -1,4 +1,4 @@
-// GPT2Claude Migration Kit v2.6
+// GPT2Claude Migration Kit v2.7
 // https://github.com/Siamsnus/GPT2Claude-Migration-Kit
 // Exports ChatGPT memories, conversations, and instructions
 // No data leaves your browser - everything runs locally
@@ -135,7 +135,7 @@
     <div class="g2c-header g2c-drag-handle">\
       <div>\
         <div class="g2c-title"><span class="gpt">GPT</span><span class="arrow">\u2192</span><span class="claude">Claude</span></div>\
-        <div class="g2c-version">Migration Kit v2.6</div>\
+        <div class="g2c-version">Migration Kit v2.7</div>\
       </div>\
       <button class="g2c-close" id="g2c-close">\u00D7</button>\
     </div>\
@@ -383,7 +383,7 @@
       var memories = data.memories || data.results || data;
       var md = "# ChatGPT Memory Export\n";
       md += "# Exported: " + new Date().toISOString() + "\n";
-      md += "# Tool: GPT2Claude Migration Kit v2.6\n";
+      md += "# Tool: GPT2Claude Migration Kit v2.7\n";
       if (data.memory_num_tokens) md += "# Tokens used: " + data.memory_num_tokens + " / " + (data.memory_max_tokens || "?") + "\n";
       md += "\n";
 
@@ -1521,6 +1521,7 @@
       memory_scope: (listItem && listItem.memory_scope) || null,
       is_do_not_remember: (listItem && listItem.is_do_not_remember) || false,
       has_branches: hasBranches,
+      _mapping_node_count: detail.mapping ? Object.keys(detail.mapping).length : 0,
       message_count: messages.length,
       messages: messages
     };
@@ -1624,8 +1625,8 @@
 
       var fullExport = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.6",
-        format_version: 6,
+        tool: "GPT2Claude Migration Kit v2.7",
+        format_version: 7,
         account: cachedAccountInfo || null,
         total_conversations: filtered.length,
         conversations: []
@@ -1925,6 +1926,91 @@
       }
       } // end if (regularConvos.length > 0)
 
+      // ---- TRUNCATION DETECTION & RECOVERY ----
+      // Batch endpoint intermittently returns incomplete mapping trees.
+      // Detect suspected truncation and re-fetch via single endpoint.
+      var truncationSuspects = [];
+      for (var ti = 0; ti < fullExport.conversations.length; ti++) {
+        var conv = fullExport.conversations[ti];
+        if (conv.error) continue; // skip failed downloads
+        if (!conv._mapping_node_count) continue; // no mapping data to judge
+
+        var ageSeconds = 0;
+        if (conv.create_time && conv.update_time) {
+          ageSeconds = conv.update_time - conv.create_time;
+        }
+        var ageDays = ageSeconds / 86400;
+
+        // Heuristic: flag conversations with suspiciously few nodes for their lifespan
+        var suspect = false;
+        if (conv.message_count === 0 && conv._mapping_node_count > 0) {
+          suspect = true; // has nodes but zero extractable messages
+        } else if (ageDays > 30 && conv._mapping_node_count < 40) {
+          suspect = true; // month+ conversation with very small tree
+        } else if (ageDays > 7 && conv._mapping_node_count < 20) {
+          suspect = true; // week+ conversation with tiny tree
+        } else if (ageDays > 1 && conv.message_count < 4) {
+          suspect = true; // multi-day conversation with almost no messages
+        }
+
+        if (suspect) {
+          truncationSuspects.push({index: ti, conv: conv});
+        }
+      }
+
+      if (truncationSuspects.length > 0) {
+        log("Truncation check: " + truncationSuspects.length + " conversation(s) flagged, re-fetching\u2026");
+        var dlMode = document.getElementById("g2c-dl-mode");
+        if (dlMode) dlMode.textContent = "\uD83D\uDD0D Verifying truncated conversations\u2026";
+
+        var recovered = 0;
+        var verified = 0;
+        for (var ts = 0; ts < truncationSuspects.length; ts++) {
+          var sus = truncationSuspects[ts];
+          try {
+            var singleResp = await downloadSingle(sus.conv.id, token);
+            if (singleResp.status === 429) {
+              log("Rate limited during truncation check, waiting 30s\u2026", "error");
+              await new Promise(function(r) { setTimeout(r, 30000); });
+              ts--; continue;
+            }
+            if (singleResp.status !== 200) continue;
+
+            var singleDetail = await singleResp.json();
+            var singleNodeCount = singleDetail.mapping ? Object.keys(singleDetail.mapping).length : 0;
+
+            if (singleNodeCount > sus.conv._mapping_node_count) {
+              // Single endpoint returned more data — use it
+              var listItem = listLookup[sus.conv.id] || null;
+              var reprocessed = processConversationDetail(singleDetail, listItem);
+              // Preserve metadata from original
+              reprocessed.project = sus.conv.project;
+              reprocessed.project_id = sus.conv.project_id;
+              reprocessed.archived = sus.conv.archived;
+              reprocessed._truncation_recovered = true;
+              reprocessed._batch_node_count = sus.conv._mapping_node_count;
+              reprocessed._batch_message_count = sus.conv.message_count;
+
+              fullExport.conversations[sus.index] = reprocessed;
+              recovered++;
+              log("Recovered: " + sus.conv.title + " (" + sus.conv.message_count + " \u2192 " + reprocessed.message_count + " messages)");
+            } else {
+              verified++;
+            }
+          } catch (e) {
+            log("Re-fetch failed: " + sus.conv.title + " \u2014 " + e.message, "error");
+          }
+          await new Promise(function(r) { setTimeout(r, 500); });
+        }
+
+        if (recovered > 0) {
+          log("Truncation recovery: " + recovered + " conversation(s) recovered, " + verified + " verified OK");
+        } else {
+          log("Truncation check: all " + truncationSuspects.length + " verified OK");
+        }
+        if (dlMode) dlMode.textContent = "";
+      }
+
       // ---- DOWNLOAD SHARED CONVERSATIONS ----
       if (sharedConvos.length > 0) {
         log("Downloading " + sharedConvos.length + " shared conversation(s)\u2026");
@@ -2007,7 +2093,16 @@
         exportFilename = "chatgpt_archived_conversations.json";
       }
       downloadFile(json, exportFilename, "application/json");
-      log("DONE! " + successCount + " conversations, " + errorCount + " errors, ~" + sizeStr, "success");
+
+      // Count truncation recoveries
+      var recoveredCount = 0;
+      for (var rc = 0; rc < fullExport.conversations.length; rc++) {
+        if (fullExport.conversations[rc]._truncation_recovered) recoveredCount++;
+      }
+
+      var doneMsg = "DONE! " + successCount + " conversations, " + errorCount + " errors, ~" + sizeStr;
+      if (recoveredCount > 0) doneMsg += " (" + recoveredCount + " recovered from truncation)";
+      log(doneMsg, "success");
 
       // Collect model breakdown from export
       var modelBreakdown = {};
@@ -2049,6 +2144,7 @@
             <div class="g2c-complete-icon">\u2705</div>\
             <div class="g2c-complete-title">Export Complete!</div>\
             <div class="g2c-complete-sub">' + successCount + ' conversations \u00B7 ' + sizeStr + ' \u00B7 ' + elapsedStr + '</div>\
+            ' + (recoveredCount > 0 ? '<div class="g2c-complete-sub" style="color:#a0e0a0;">\uD83D\uDD0D ' + recoveredCount + ' conversation(s) recovered from batch truncation</div>' : '') + '\
             ' + modelTagsHtml + '\
           </div>\
           <div class="g2c-whatsnext">\
@@ -2105,7 +2201,7 @@
 
       var result = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.6",
+        tool: "GPT2Claude Migration Kit v2.7",
         data: {}
       };
 

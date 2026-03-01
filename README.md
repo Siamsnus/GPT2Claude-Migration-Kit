@@ -199,6 +199,7 @@ Everything runs in your browser — no data is sent anywhere.
 - Citation marker and image group stripping (OpenAI private-use Unicode)
 - Image references captured as placeholders
 - Rate limit handling with auto-retry
+- Batch truncation detection: flags suspicious conversations and re-fetches via single endpoint
 - Time estimate before download
 
 **Viewer:**

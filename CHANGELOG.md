@@ -1,3 +1,50 @@
+# v2.7 Changelog
+
+## New Features
+
+### 🔍 Batch Truncation Detection & Recovery
+**Problem:** The batch endpoint (`/conversations/batch`) intermittently returns incomplete mapping trees. Cross-examination found 143 conversations with missing messages — 6,798 messages lost total — with no warning to the user.
+
+**Fix:** After batch download completes, a new truncation detection pass scans every conversation for suspicious patterns:
+- Conversations with mapping nodes but zero extractable messages
+- Month+ conversations with fewer than 40 mapping nodes
+- Week+ conversations with fewer than 20 nodes
+- Multi-day conversations with fewer than 4 messages
+
+Flagged conversations are automatically re-fetched via the single-conversation endpoint (`GET /conversation/{id}`). If the single endpoint returns more data, the batch result is replaced with the complete version.
+
+**Recovery metadata preserved per conversation:**
+- `_truncation_recovered: true` — marks conversations that were recovered
+- `_batch_node_count` — original node count from batch endpoint
+- `_batch_message_count` — original message count before recovery
+
+**Reporting:**
+- Progress log: `Truncation check: 4 conversation(s) flagged, re-fetching…`
+- Recovery log: `Recovered: [title] (15 → 96 messages)` for each recovered conversation
+- Completion summary includes recovery count: `(3 recovered from truncation)`
+- Clean pass log: `Truncation check: all 4 verified OK`
+
+**Rate limit handling:** If rate-limited during re-fetch, waits 30s and retries automatically.
+
+### 📊 Mapping Node Count Tracking
+- `_mapping_node_count` field added to every exported conversation
+- Records the number of nodes in the conversation's mapping tree
+- Enables post-export analysis and future truncation detection improvements
+
+## Version Bumps
+- `migrate.js` header → v2.7
+- Panel UI badge → v2.7
+- Export JSON `tool` field → v2.7
+- Export `format_version` → 7
+- Memory export header → v2.7
+- Instructions export header → v2.7
+
+## Stats
+- 2,284 → 2,391 lines (+107 lines, +5%)
+- Syntax validated ✅
+
+---
+
 # v2.6 Changelog
 
 ## Bug Fixes
