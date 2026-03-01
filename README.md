@@ -138,6 +138,8 @@ The tool runs entirely in your browser using your existing ChatGPT login session
 - `/backend-api/shared_conversations` — discovers publicly shared conversations
 - `/backend-api/share/{id}` — fetches shared conversation detail
 - `/backend-api/gizmos/{id}/conversations` — fetches project conversations
+- `/backend-api/projects` — discovers user's projects (index endpoint)
+- `/backend-api/gizmos/discovery/mine` — discovers user's gizmos/projects (alternate index)
 - `/backend-api/user_system_messages` — fetches custom instructions
 - `/backend-api/settings/beta_features` — fetches/toggles beta feature flags
 - `/backend-api/models` — fetches available model configuration
@@ -191,7 +193,7 @@ Everything runs in your browser — no data is sent anywhere.
 - Expanded instructions export: account structure, Codex usage, compliance (7 endpoints)
 - Desktop camera toggle: enable/disable webcam input on desktop ChatGPT (Chromium only)
 - Conversation metadata: memory_scope and do-not-remember flags preserved
-- Project conversations included via multi-method discovery
+- Project conversations included via 5-method discovery cascade
 - Branch/regeneration data preserved
 - Reasoning model support: thinking blocks, reasoning recaps, 7 content types
 - Citation marker and image group stripping (OpenAI private-use Unicode)

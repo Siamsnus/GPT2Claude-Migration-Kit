@@ -1,4 +1,4 @@
-// GPT2Claude Migration Kit v2.5
+// GPT2Claude Migration Kit v2.6
 // https://github.com/Siamsnus/GPT2Claude-Migration-Kit
 // Exports ChatGPT memories, conversations, and instructions
 // No data leaves your browser - everything runs locally
@@ -135,7 +135,7 @@
     <div class="g2c-header g2c-drag-handle">\
       <div>\
         <div class="g2c-title"><span class="gpt">GPT</span><span class="arrow">\u2192</span><span class="claude">Claude</span></div>\
-        <div class="g2c-version">Migration Kit v2.5</div>\
+        <div class="g2c-version">Migration Kit v2.6</div>\
       </div>\
       <button class="g2c-close" id="g2c-close">\u00D7</button>\
     </div>\
@@ -383,7 +383,7 @@
       var memories = data.memories || data.results || data;
       var md = "# ChatGPT Memory Export\n";
       md += "# Exported: " + new Date().toISOString() + "\n";
-      md += "# Tool: GPT2Claude Migration Kit v2.5\n";
+      md += "# Tool: GPT2Claude Migration Kit v2.6\n";
       if (data.memory_num_tokens) md += "# Tokens used: " + data.memory_num_tokens + " / " + (data.memory_max_tokens || "?") + "\n";
       md += "\n";
 
@@ -518,24 +518,58 @@
 
       log("Total conversations: " + scannedConvos.length);
 
-      // Discover and fetch project conversations via sidebar DOM scraping
+      // Discover and fetch project conversations via 5-method cascade
       try {
         log("Checking for projects...");
         var statusEl = document.getElementById("g2c-scan-status");
         if (statusEl) statusEl.innerHTML = '<span class="g2c-scan-dots"><span></span><span></span><span></span></span> Checking projects\u2026';
 
         var discoveredProjects = {};
+        var discoveryMethods = [];
 
-        // Method 1: Check conversation items for gizmo_id (project conversations have this)
+        // Method 1: Conversation scan — check fetched conversations for gizmo_id fields
+        var method1Count = 0;
         for (var gi = 0; gi < scannedConvos.length; gi++) {
           var gid = scannedConvos[gi].gizmo_id || scannedConvos[gi].conversation_template_id || scannedConvos[gi].workspace_id || null;
           if (gid && gid.indexOf("g-p-") === 0 && !discoveredProjects[gid]) {
             discoveredProjects[gid] = null; // name unknown yet
-            log("Found project gizmo in conversation list: " + gid);
+            method1Count++;
           }
         }
+        if (method1Count > 0) discoveryMethods.push("conversation scan");
 
-        // Method 2: Try API endpoint for user's gizmos/projects
+        // Method 2: /projects API — try the projects index endpoint (NEW)
+        var api404Count = 0;
+        try {
+          var projectsResp = await fetch(
+            "https://chatgpt.com/backend-api/projects",
+            {credentials: "include", headers: headers}
+          );
+          if (projectsResp.status === 200) {
+            var projectsData = await projectsResp.json();
+            var projectsList = projectsData.items || projectsData.projects || projectsData.list || [];
+            if (Array.isArray(projectsList)) {
+              var method2Count = 0;
+              for (var p2i = 0; p2i < projectsList.length; p2i++) {
+                var proj = projectsList[p2i].resource || projectsList[p2i].gizmo || projectsList[p2i];
+                var p2id = proj.id || proj.gizmo_id || proj.short_url || "";
+                if (p2id.indexOf("g-p-") === 0 && !discoveredProjects[p2id]) {
+                  var p2name = (proj.display && proj.display.name) || proj.name || proj.title || null;
+                  discoveredProjects[p2id] = p2name;
+                  method2Count++;
+                }
+              }
+              if (method2Count > 0) discoveryMethods.push("/projects API");
+            }
+          } else {
+            if (projectsResp.status === 404) api404Count++;
+            log("/projects API: HTTP " + projectsResp.status);
+          }
+        } catch (p2err) {
+          log("/projects API failed: " + p2err.message);
+        }
+
+        // Method 3: /gizmos/discovery/mine API — existing gizmos endpoint
         try {
           var gizmoResp = await fetch(
             "https://chatgpt.com/backend-api/gizmos/discovery/mine",
@@ -545,42 +579,116 @@
             var gizmoData = await gizmoResp.json();
             var gizmoItems = gizmoData.list || gizmoData.items || gizmoData.gizmos || [];
             if (Array.isArray(gizmoItems)) {
+              var method3Count = 0;
               for (var gmi = 0; gmi < gizmoItems.length; gmi++) {
                 var gizmo = gizmoItems[gmi].resource || gizmoItems[gmi].gizmo || gizmoItems[gmi];
                 var gizmoId = gizmo.id || gizmo.short_url || "";
                 if (gizmoId.indexOf("g-p-") === 0 || (gizmo.type && gizmo.type === "project")) {
-                  var gName = (gizmo.display && gizmo.display.name) || gizmo.name || gizmo.title || "Project";
-                  discoveredProjects[gizmoId] = gName;
-                  log("Found project via API: " + gName + " (" + gizmoId + ")");
+                  if (!discoveredProjects[gizmoId]) {
+                    var gName = (gizmo.display && gizmo.display.name) || gizmo.name || gizmo.title || null;
+                    discoveredProjects[gizmoId] = gName;
+                    method3Count++;
+                  }
                 }
               }
+              if (method3Count > 0) discoveryMethods.push("/gizmos API");
             }
           } else {
-            log("Gizmos API: HTTP " + gizmoResp.status + " (trying other methods)");
+            if (gizmoResp.status === 404) api404Count++;
+            log("/gizmos API: HTTP " + gizmoResp.status);
           }
         } catch (apiErr) {
-          log("Gizmos API failed: " + apiErr.message + " (trying other methods)");
+          log("/gizmos API failed: " + apiErr.message);
         }
 
-        // Method 3: DOM scraping fallback — scan sidebar for project links
-        var projLinks = document.querySelectorAll('a[href*="/g/g-p-"]');
-        for (var pl = 0; pl < projLinks.length; pl++) {
-          var href = projLinks[pl].getAttribute("href") || "";
-          var idMatch = href.match(/g-p-[a-f0-9]+/);
-          if (!idMatch) continue;
-          var projId = idMatch[0];
-          if (discoveredProjects[projId]) continue;
-          var slugMatch = href.match(/g-p-[a-f0-9]+-([^/]+)/);
-          var linkText = projLinks[pl].textContent.trim();
-          var projName = linkText || (slugMatch ? slugMatch[1].replace(/-/g, " ") : "Project");
-          if (href.indexOf("/c/") > -1) continue;
-          discoveredProjects[projId] = projName;
-          log("Found project via DOM: " + projName + " (" + projId + ")");
+        // Warn if both API endpoints returned 404
+        if (api404Count >= 2) {
+          log("\u26a0\ufe0f Both project API endpoints returned 404 \u2014 relying on DOM/conversation discovery", "warn");
+        }
+
+        // Method 4: DOM scraping — 5 CSS selectors + deep fallback
+        var method4Count = 0;
+        var domSelectors = [
+          'a[href*="/g/g-p-"]',
+          'a[href*="/project/"]',
+          'nav a[href*="g-p-"]',
+          '[data-testid*="project"] a',
+          'li a[href*="g-p-"]'
+        ];
+        var domFoundIds = {};
+        for (var ds = 0; ds < domSelectors.length; ds++) {
+          try {
+            var domLinks = document.querySelectorAll(domSelectors[ds]);
+            for (var dl = 0; dl < domLinks.length; dl++) {
+              var domHref = domLinks[dl].getAttribute("href") || "";
+              var domMatch = domHref.match(/g-p-[a-f0-9]+/);
+              if (!domMatch) continue;
+              var domProjId = domMatch[0];
+              if (domFoundIds[domProjId] || discoveredProjects[domProjId]) continue;
+              if (domHref.indexOf("/c/") > -1) continue; // skip conversation links
+              var domSlug = domHref.match(/g-p-[a-f0-9]+-([^/]+)/);
+              var domText = domLinks[dl].textContent.trim();
+              var domName = domText || (domSlug ? domSlug[1].replace(/-/g, " ") : null);
+              discoveredProjects[domProjId] = domName;
+              domFoundIds[domProjId] = true;
+              method4Count++;
+            }
+          } catch (selErr) {
+            // selector not supported, skip
+          }
+        }
+
+        // Deep fallback: scan ALL anchor elements for g-p- patterns
+        if (method4Count === 0) {
+          try {
+            var allAnchors = document.querySelectorAll("a[href]");
+            for (var aa = 0; aa < allAnchors.length; aa++) {
+              var aaHref = allAnchors[aa].getAttribute("href") || "";
+              if (aaHref.indexOf("g-p-") === -1) continue;
+              var aaMatch = aaHref.match(/g-p-[a-f0-9]+/);
+              if (!aaMatch) continue;
+              var aaProjId = aaMatch[0];
+              if (domFoundIds[aaProjId] || discoveredProjects[aaProjId]) continue;
+              if (aaHref.indexOf("/c/") > -1) continue;
+              var aaSlug = aaHref.match(/g-p-[a-f0-9]+-([^/]+)/);
+              var aaText = allAnchors[aa].textContent.trim();
+              var aaName = aaText || (aaSlug ? aaSlug[1].replace(/-/g, " ") : null);
+              discoveredProjects[aaProjId] = aaName;
+              domFoundIds[aaProjId] = true;
+              method4Count++;
+            }
+          } catch (deepErr) {
+            // deep scan failed, not critical
+          }
+        }
+        if (method4Count > 0) discoveryMethods.push("DOM");
+
+        // Method 5: __NEXT_DATA__ scan — extract project IDs from Next.js app state (NEW)
+        var method5Count = 0;
+        try {
+          var nextDataEl = document.getElementById("__NEXT_DATA__");
+          if (nextDataEl) {
+            var nextText = nextDataEl.textContent || nextDataEl.innerText || "";
+            var nextMatches = nextText.match(/g-p-[a-f0-9]+/g);
+            if (nextMatches) {
+              var nextSeen = {};
+              for (var nm = 0; nm < nextMatches.length; nm++) {
+                var nextId = nextMatches[nm];
+                if (nextSeen[nextId] || discoveredProjects[nextId]) continue;
+                nextSeen[nextId] = true;
+                discoveredProjects[nextId] = null;
+                method5Count++;
+              }
+              if (method5Count > 0) discoveryMethods.push("__NEXT_DATA__");
+            }
+          }
+        } catch (nextErr) {
+          // __NEXT_DATA__ not available or parse failed
         }
 
         var projIds = Object.keys(discoveredProjects);
         if (projIds.length > 0) {
-          log("Found " + projIds.length + " project(s) total");
+          log("Found " + projIds.length + " project(s) via " + (discoveryMethods.length > 0 ? discoveryMethods.join(" + ") : "unknown"));
 
           // Build index of existing conversation IDs for deduplication
           var existingIdx = {};
@@ -588,12 +696,15 @@
             existingIdx[scannedConvos[ei].id] = ei;
           }
 
+          var totalProjNew = 0;
+          var totalProjTagged = 0;
+
           for (var pi = 0; pi < projIds.length; pi++) {
             var projId = projIds[pi];
-            var projName = discoveredProjects[projId] || "Project";
+            var projName = discoveredProjects[projId];
 
             // Try to resolve project name if unknown
-            if (projName === "Project" || projName === null) {
+            if (!projName) {
               try {
                 var infoResp = await fetch(
                   "https://chatgpt.com/backend-api/gizmos/" + projId,
@@ -606,8 +717,9 @@
                   log("Resolved project name: " + projName);
                 }
               } catch (nameErr) {
-                // keep default name
+                projName = "Project";
               }
+              discoveredProjects[projId] = projName;
             }
 
             log("Fetching project: " + projName + " (" + projId + ")");
@@ -631,6 +743,15 @@
               for (var pj = 0; pj < projItems.length; pj++) {
                 projItems[pj]._project = projName;
                 projItems[pj]._project_id = projId;
+
+                // Cross-discovery: check fetched conversations for new project IDs
+                var crossGid = projItems[pj].gizmo_id || null;
+                if (crossGid && crossGid.indexOf("g-p-") === 0 && !discoveredProjects[crossGid]) {
+                  discoveredProjects[crossGid] = null;
+                  projIds.push(crossGid); // add to queue — will be fetched in later iterations
+                  log("Cross-discovered project: " + crossGid);
+                }
+
                 // Only add if not already in main scan (deduplicate)
                 if (existingIdx[projItems[pj].id] === undefined) {
                   scannedConvos.push(projItems[pj]);
@@ -653,10 +774,25 @@
               await new Promise(function(r) { setTimeout(r, 500); });
             }
             log("Project " + projName + ": " + projConvoCount + " new, " + projTaggedCount + " tagged");
+            totalProjNew += projConvoCount;
+            totalProjTagged += projTaggedCount;
           }
+          log("Projects total: " + totalProjNew + " new conversations from " + projIds.length + " project(s)");
           log("Total with projects: " + scannedConvos.length);
         } else {
-          log("No projects found");
+          // Smart hint: check if any conversations reference projects despite no discovery
+          var hasProjectRefs = false;
+          for (var hpr = 0; hpr < scannedConvos.length; hpr++) {
+            if (scannedConvos[hpr].gizmo_id && scannedConvos[hpr].gizmo_id.indexOf("g-p-") === 0) {
+              hasProjectRefs = true;
+              break;
+            }
+          }
+          if (hasProjectRefs) {
+            log("No projects discovered, but conversations contain project references. Try scrolling sidebar to load projects into DOM, then re-scan.");
+          } else {
+            log("No projects found");
+          }
         }
       } catch (projErr) {
         log("Projects check failed: " + projErr.message + " (continuing without)");
@@ -1488,8 +1624,8 @@
 
       var fullExport = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.5",
-        format_version: 5,
+        tool: "GPT2Claude Migration Kit v2.6",
+        format_version: 6,
         account: cachedAccountInfo || null,
         total_conversations: filtered.length,
         conversations: []
@@ -1969,7 +2105,7 @@
 
       var result = {
         export_date: new Date().toISOString(),
-        tool: "GPT2Claude Migration Kit v2.5",
+        tool: "GPT2Claude Migration Kit v2.6",
         data: {}
       };
 

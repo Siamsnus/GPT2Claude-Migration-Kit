@@ -1,3 +1,42 @@
+# v2.6 Changelog
+
+## Bug Fixes
+
+### 🔧 Project Discovery Overhaul — "The Kylie Bug"
+**Root cause:** Project conversations were silently dropped because the only API discovery endpoint (`/gizmos/discovery/mine`) returns HTTP 404 on Plus (personal) accounts. The DOM scraping fallback used a single CSS selector that only caught projects visible in the sidebar — typically 1 out of 16+.
+
+**Impact:** Up to ~60% of conversations silently missing from export. On the reporting account: 534 out of 926 conversations dropped with no warning.
+
+**Fix:** Replaced 3-method discovery with 5-method cascade:
+- **Method 1: Conversation scan** — scans fetched conversations for `gizmo_id` fields (existing, improved)
+- **Method 2: `/projects` API** — NEW, tries the projects index endpoint
+- **Method 3: `/gizmos/discovery/mine` API** — existing gizmos endpoint
+- **Method 4: DOM scraping** — now uses 5 CSS selectors for resilience against ChatGPT UI changes, plus a deep fallback that scans ALL anchor elements for `g-p-` patterns
+- **Method 5: `__NEXT_DATA__` scan** — NEW, extracts project IDs from Next.js app state embedded in the page
+
+**Additional improvements:**
+- **Cross-discovery during fetch** — when fetching conversations from a known project, any new `gizmo_id` values found are added to the discovery queue automatically. Projects can now discover other projects.
+- **Discovery method logging** — log shows which methods found projects: "Found 16 project(s) via conversation scan + DOM + __NEXT_DATA__"
+- **API 404 warning** — when both API endpoints return 404, a visible warning appears
+- **Smart hint** — if no projects found but conversations contain project references, suggests scrolling sidebar to load projects into DOM
+- **Per-project summary totals** — "Projects total: 534 new conversations from 16 project(s)"
+
+**Credit:** Bug discovered and diagnosed by [KylieKat17](https://github.com/KylieKat17/Migration-Kit-Discrepancy-Audit)
+
+## Version Bumps
+- `migrate.js` header → v2.6
+- Panel UI badge → v2.6
+- Export JSON `tool` field → v2.6
+- Export `format_version` → 6
+- Memory export header → v2.6
+- Instructions export header → v2.6
+
+## Stats
+- 2,159 → 2,284 lines (+125 lines, +6%)
+- Syntax validated ✅
+
+---
+
 # v2.5 Changelog
 
 ## New Features
