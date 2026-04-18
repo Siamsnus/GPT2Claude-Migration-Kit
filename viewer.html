@@ -80,6 +80,11 @@
   .msg-bubble { padding: 12px 16px; border-radius: 14px; font-size: 0.9rem; line-height: 1.65; max-width: 600px; word-wrap: break-word; white-space: pre-line; }
   .msg-bubble pre { white-space: pre-wrap; margin: 8px 0; }
   .msg-bubble strong { font-weight: 700; }
+  .code-block { margin: 10px 0; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.35); }
+  .code-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px; background: rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .code-lang { font-family: var(--mono); font-size: 0.7rem; font-weight: 600; color: var(--text-dim); text-transform: capitalize; }
+  .code-block pre { margin: 0; padding: 12px 14px; font-family: var(--mono); font-size: 0.82rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; overflow-x: auto; color: var(--text); background: none; }
+  .md-hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
   .img-placeholder { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.04); border: 1px dashed var(--border); border-radius: 10px; padding: 14px 16px; margin: 8px 0; color: var(--text-dim); font-size: 0.82rem; line-height: 1.4; }
   .img-placeholder svg { flex-shrink: 0; }
   .message.user .msg-bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; }
@@ -87,6 +92,17 @@
   .message.system .msg-bubble { background: rgba(126,184,160,0.06); border: 1px solid rgba(126,184,160,0.15); font-style: italic; color: var(--text-dim); font-size: 0.82rem; }
   .message.tool .msg-bubble { background: var(--surface); border: 1px solid var(--border); font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); }
   .thinking-indicator { text-align: center; padding: 6px 0; font-size: 0.78rem; color: var(--text-faint); font-style: italic; }
+  .ci-thought { margin: 6px 0 12px 46px; max-width: 620px; }
+  .ci-thought summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; font-size: 0.78rem; color: var(--text-faint); font-style: italic; user-select: none; transition: border-color 0.15s; }
+  .ci-thought summary:hover { border-color: var(--accent); color: var(--text-dim); }
+  .ci-thought summary::-webkit-details-marker { display: none; }
+  .ci-thought summary::marker { content: ""; }
+  .ci-thought summary .ci-chevron { transition: transform 0.15s; font-style: normal; font-size: 0.65rem; }
+  .ci-thought[open] summary .ci-chevron { transform: rotate(90deg); }
+  .ci-thought-content { margin-top: 8px; display: grid; gap: 6px; }
+  .ci-step { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .ci-step-header { padding: 6px 12px; font-size: 0.68rem; font-family: var(--mono); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+  .ci-step pre { margin: 0; padding: 10px 12px; font-family: var(--mono); font-size: 0.72rem; line-height: 1.55; color: var(--text-dim); white-space: pre-wrap; word-break: break-word; }
   .tool-indicator { text-align: center; padding: 6px 14px; margin: 4px auto; font-size: 0.75rem; color: var(--text-faint); font-family: var(--mono); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; max-width: 500px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tool-accordion { max-width: 620px; margin: 8px 0 12px 46px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
   .tool-accordion summary { list-style: none; cursor: pointer; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; user-select: none; }
@@ -106,6 +122,20 @@
   .message-tool-icon { font-size: 0.82rem; line-height: 1; }
   .message-tool-panel { margin-top: 10px; display: grid; gap: 8px; }
   .message-tool-panel .tool-accordion { margin: 0; max-width: 100%; border-radius: 10px; }
+  .user-file-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-bottom: 10px; }
+  .user-file-card { width: min(360px, 100%); border: 1px solid rgba(255,255,255,0.22); border-radius: 14px; background: rgba(255,255,255,0.05); overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset; }
+  .user-file-card summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px; user-select: none; }
+  .user-file-card summary::-webkit-details-marker { display: none; }
+  .user-file-card summary::marker { content: ""; }
+  .user-file-icon { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(180deg, #2ca0ff, #1784ea); color: #fff; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,0.25); }
+  .user-file-icon svg { width: 20px; height: 20px; }
+  .user-file-meta { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+  .user-file-name { font-size: 0.92rem; font-weight: 600; color: var(--text); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-file-kind { font-size: 0.8rem; color: var(--text-dim); margin-top: 2px; }
+  .user-file-card pre { margin: 0; padding: 12px 14px 14px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.18); color: var(--text-dim); font-family: var(--mono); font-size: 0.74rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; overflow-x: auto; text-align: left; }
+  .file-mention-pill { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px 1px 5px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.10); border-radius: 6px; font-size: 0.82em; color: var(--text-dim); vertical-align: baseline; white-space: nowrap; line-height: 1.7; }
+  .file-mention-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: linear-gradient(180deg, #2ca0ff, #1784ea); color: #fff; flex-shrink: 0; }
+  .file-mention-icon svg { width: 12px; height: 12px; }
   .msg-time { font-size: 0.68rem; color: var(--text-faint); margin-top: 4px; font-family: var(--mono); }
   .message.user .msg-time { text-align: right; }
   .msg-model { display: inline-block; font-size: 0.65rem; color: var(--gpt); background: var(--gpt-dim); padding: 1px 6px; border-radius: 4px; font-family: var(--mono); margin-left: 8px; vertical-align: middle; }
@@ -307,6 +337,7 @@ var currentModelFilter = "";
 var searchTimeout = null;
 var loadedTypes = {};
 var exportFormatVersion = 0; // 0 = unknown/old, 3 = with branches
+var _currentAbstractFileNames = []; // populated per-conversation for inline mention pills
 
 // ===== TAB SWITCHING =====
 function switchTab(tab) {
@@ -495,12 +526,13 @@ function showUI(activeTab) {
 // ===== PROCESS CONVERSATIONS =====
 function processConversations(content) {
   // Strip OpenAI internal citation markers (private-use Unicode U+E200/E201/E202)
+  // Unknown markers (likely file-mention citations) are kept as \uFFFE tokens for rendering.
   function stripCitations(text) {
     if (!text) return text;
     return text
       .replace(/\uE200cite(\uE202turn\dsearch\d+)+\uE201/g, "")
       .replace(/\uE200image_group\uE202\{[^}]*\}\uE201/g, "[🖼 images]")
-      .replace(/\uE200[\s\S]*?\uE201/g, "");
+      .replace(/\uE200([\s\S]*?)\uE201/g, "\uFFFEFMENTION\uFFFE");
   }
 
   try {
@@ -1022,9 +1054,86 @@ function openConversation(id) {
   var firstBranchIdx = -1;
   var pendingToolCalls = [];
 
+  // ── Pre-process: detect multi-message abstract-file blocks ──
+  var abstractFileAttachments = {};  // userMsgIndex -> [attachment, ...]
+  var abstractSkipSet = {};          // msgIndex -> true  (skip during render)
+  (function preprocessAbstractFiles() {
+    var IDLE = 0, COLLECT = 1, state = IDLE;
+    var blockLines = [], lastUserIdx = -1;
+    for (var pi = 0; pi < c.messages.length; pi++) {
+      var pm = c.messages[pi];
+      if (isMetadataMessage(pm)) continue;
+      var pt = (pm.text || "").trim();
+      if (pm.role === "user" && !_startsAF(pt) && !_endsAF(pt)) lastUserIdx = pi;
+      if (state === IDLE) {
+        if (_startsAF(pt)) {
+          state = COLLECT; blockLines = [];
+          abstractSkipSet[pi] = true;
+          var sl = pt.split(/\r?\n/);
+          for (var k = 0; k < sl.length; k++) {
+            if (_startsAF(sl[k])) continue;
+            if (_endsAF(sl[k])) { state = IDLE; break; }
+            blockLines.push(sl[k]);
+          }
+          if (state === IDLE) _finishAF(pi);
+        }
+      } else {
+        abstractSkipSet[pi] = true;
+        if (_endsAF(pt)) { state = IDLE; _finishAF(pi); }
+        else {
+          var sl2 = pt.split(/\r?\n/);
+          for (var k2 = 0; k2 < sl2.length; k2++) {
+            if (_endsAF(sl2[k2])) { state = IDLE; break; }
+            blockLines.push(sl2[k2]);
+          }
+          if (state === IDLE) _finishAF(pi);
+        }
+      }
+    }
+    if (state === COLLECT && blockLines.length) _finishAF(-1);
+
+    function _startsAF(t) { return t.indexOf("to cite this file") !== -1 || t.indexOf("to surface it as a link") !== -1; }
+    function _endsAF(t)   { return t.indexOf("files uploaded by the user have been fully loaded") !== -1; }
+    function _finishAF(endIdx) {
+      var payload = blockLines.filter(function(l) { return l.trim().length > 0; });
+      if (!payload.length) return;
+      var name = _inferName(payload);
+      var att = { name: name, kind: "Document", rawText: payload.join("\n") };
+      var idx = lastUserIdx >= 0 ? lastUserIdx : _nextUser(endIdx >= 0 ? endIdx : c.messages.length - 1);
+      if (idx < 0) idx = 0;
+      if (!abstractFileAttachments[idx]) abstractFileAttachments[idx] = [];
+      abstractFileAttachments[idx].push(att);
+    }
+    function _nextUser(from) {
+      for (var n = from + 1; n < c.messages.length; n++)
+        if (c.messages[n].role === "user" && !isMetadataMessage(c.messages[n])) return n;
+      return -1;
+    }
+    function _inferName(lines) {
+      if (!lines.length) return "Inserted document";
+      var cl = lines[0].trim().replace(/^\\+/, "").replace(/^'+|'+$/g, "");
+      // Handle /mnt/data/ paths: '/mnt/data/\\filename.txt'
+      var mntMatch = cl.match(/\/mnt\/data\/\\*(.+?)$/);
+      if (mntMatch) { var fn = mntMatch[1].replace(/^\\+/, ""); if (fn) return fn; }
+      if (/\.[A-Za-z0-9]{1,10}$/.test(cl)) { var p = cl.split(/[\\\/]/); return p[p.length-1]; }
+      var fm = cl.match(/([^\\\/:]+?\.[A-Za-z0-9]{1,10})/);
+      if (fm) return fm[1].trim();
+      return "Inserted document";
+    }
+  })();
+
+  // Build list of abstract file names for mention pills in assistant text
+  _currentAbstractFileNames = [];
+  var _afKeys = Object.keys(abstractFileAttachments);
+  for (var _ak = 0; _ak < _afKeys.length; _ak++) {
+    var _afList = abstractFileAttachments[_afKeys[_ak]];
+    for (var _af = 0; _af < _afList.length; _af++) _currentAbstractFileNames.push(_afList[_af].name);
+  }
+
   for (var i = 0; i < c.messages.length; i++) {
     var m = c.messages[i];
     if (isMetadataMessage(m)) continue;
+    if (abstractSkipSet[i]) continue;
     var role = m.role || "unknown";
     var roleClass = role;
     if (role === "user") roleClass = "user";
@@ -1038,27 +1147,69 @@ function openConversation(id) {
     var totalAlts = hasAlts ? m.alternatives.length + 1 : 0;
     var msgText = m.text || "";
 
-    // Special rendering for thinking/reasoning/tool messages
     var isThinking = msgText === "[thinking]";
     var isRecap = msgText.indexOf("[Thought ") === 0 || msgText.indexOf("[Thinking") === 0;
     var toolCall = detectToolCall(msgText);
 
-    // Skip standalone thinking markers — they'll merge with the recap below
     if (isThinking) continue;
-
-    // Render reasoning recap as a subtle inline indicator
     if (isRecap) {
       var recapText = msgText.replace(/^\[/, '').replace(/\]$/, '');
       html += '<div class="thinking-indicator">💭 ' + escHtml(recapText) + '</div>';
       continue;
     }
+    // Skip straggler abstract-file lines the state machine may have missed
+    if (msgText.indexOf("to cite this file") !== -1 || msgText.indexOf("to surface it as a link") !== -1) continue;
+    if (msgText.indexOf("files uploaded by the user have been fully loaded") !== -1) continue;
 
-    if (toolCall) {
-      pendingToolCalls.push(toolCall);
+    // --- Code interpreter grouping: collapse ```unknown invocations + tool outputs ---
+    var _ciBlock = extractFencedBlock(msgText.trim());
+    if (_ciBlock && _ciBlock.language === "unknown" && role === "assistant") {
+      var ciSteps = [{ text: msgText, role: "assistant" }];
+      var ciEnd = i;
+      for (var ci = i + 1; ci < c.messages.length; ci++) {
+        var cim = c.messages[ci];
+        if (isMetadataMessage(cim)) continue;
+        if (abstractSkipSet[ci]) continue;
+        var cit = (cim.text || "").trim();
+        if (cit === "[thinking]") continue;
+        if (cit.indexOf("[Thought ") === 0 || cit.indexOf("[Thinking") === 0) continue;
+        if (cit.indexOf("to cite this file") !== -1 || cit.indexOf("to surface it as a link") !== -1) continue;
+        if (cit.indexOf("files uploaded by the user have been fully loaded") !== -1) continue;
+        var ciSub = extractFencedBlock(cit);
+        // Continue collecting: assistant ```unknown OR tool/system fenced blocks OR tool raw output
+        if (cim.role === "assistant" && ciSub && ciSub.language === "unknown") {
+          ciSteps.push({ text: cit, role: "assistant" }); ciEnd = ci;
+        } else if ((cim.role === "tool" || cim.role === "system") && !detectToolCall(cit)) {
+          ciSteps.push({ text: cit, role: "tool" }); ciEnd = ci;
+        } else { break; }
+      }
+      html += '<details class="ci-thought"><summary>⚙️ Used tools (' + ciSteps.length + ' steps) <span class="ci-chevron">▶</span></summary><div class="ci-thought-content">';
+      for (var cs = 0; cs < ciSteps.length; cs++) {
+        var stepLabel = ciSteps[cs].role === "assistant" ? "Invocation" : "Output";
+        var stepBody = ciSteps[cs].text;
+        var stepBlock = extractFencedBlock(stepBody.trim());
+        html += '<div class="ci-step"><div class="ci-step-header">' + stepLabel + '</div><pre>' + escHtml(stepBlock ? stepBlock.body : stepBody) + '</pre></div>';
+      }
+      html += '</div></details>';
+      i = ciEnd;
+      continue;
+    }
+    // Also skip standalone tool messages with fenced blocks that look like code-interpreter output
+    if ((role === "tool" || role === "system") && _ciBlock && (_ciBlock.language === "" || _ciBlock.language === "unknown") && !toolCall) continue;
+
+    if (toolCall) { pendingToolCalls.push(toolCall); continue; }
+
+    // Catch-all: any remaining role=tool/system message is internal — collapse under next assistant msg
+    if (role === "tool" || (role === "system" && msgText.trim().length > 0)) {
+      pendingToolCalls.push({
+        status: "System Message",
+        debugText: msgText.length > 2000 ? msgText.substring(0, 2000) + "\n…(truncated)" : msgText
+      });
       continue;
     }
 
     var attachedToolCalls = [];
+    var attachedAbstractFiles = abstractFileAttachments[i] || [];
     var trailingToolIndex = i;
     if (role === "assistant") {
       var attached = collectAttachedToolCalls(c.messages, i);
@@ -1075,18 +1226,14 @@ function openConversation(id) {
       '<div style="flex:1;min-width:0;">';
 
     if (hasAlts) {
-      // Render carousel container with all versions
       html += '<div class="branch-carousel" data-msg="' + i + '" data-current="0" data-total="' + totalAlts + '">';
-      // Main (current) version
       html += '<div class="branch-version branch-v-0" style="display:block;"><div class="msg-bubble">' + renderMarkdown(m.text) + '</div></div>';
-      // Alternatives
       for (var ai = 0; ai < m.alternatives.length; ai++) {
         var alt = m.alternatives[ai];
         html += '<div class="branch-version branch-v-' + (ai + 1) + '" style="display:none;"><div class="msg-bubble branch-alt">' + renderMarkdown(alt.text) + '</div></div>';
       }
       html += '</div>';
       html += renderMessageToolCalls(attachedToolCalls);
-      // Time + model + carousel nav
       html += '<div class="msg-time">' + (time ? time : '') +
         '<span class="msg-model branch-model-0">' + escHtml(m.model || "") + '</span>';
       for (var ai = 0; ai < m.alternatives.length; ai++) {
@@ -1098,7 +1245,8 @@ function openConversation(id) {
         '<button onclick="branchNext(' + i + ')" title="Next version">▶</button>' +
         '</span></div>';
     } else {
-      html += '<div class="msg-bubble">' + renderMarkdown(m.text) + '</div>' +
+      html += _renderUserAbstractFiles(attachedAbstractFiles) +
+        '<div class="msg-bubble">' + renderMarkdown(m.text) + '</div>' +
         renderMessageToolCalls(attachedToolCalls) +
         '<div class="msg-time">' + (time ? time : '') +
         (m.model && m.role === "assistant" ? '<span class="msg-model">' + escHtml(m.model) + '</span>' : '') +
@@ -1155,6 +1303,7 @@ function runSearch(query) {
     for (var j = 0; j < c.messages.length; j++) {
       var m = c.messages[j];
       if (isMetadataMessage(m)) continue;
+      if (m.text && (m.text.indexOf("to cite this file") !== -1 || m.text.indexOf("files uploaded by the user have been fully loaded") !== -1)) continue;
       var idx = m.text.toLowerCase().indexOf(q);
       if (idx !== -1) {
         // Extract context around match
@@ -1319,12 +1468,22 @@ function escHtml(s) {
 }
 
 function renderMarkdown(text) {
-  // Strip OpenAI internal citation markers and image groups (private-use Unicode delimiters)
+  // Strip OpenAI internal citation markers; unknown ones → mention token
   var cleaned = text
     .replace(/\uE200cite(\uE202turn\dsearch\d+)+\uE201/g, "")
     .replace(/\uE200image_group\uE202\{[^}]*\}\uE201/g, "[🖼 images]")
-    .replace(/\uE200[\s\S]*?\uE201/g, "");
+    .replace(/\uE200([\s\S]*?)\uE201/g, "\uFFFEFMENTION\uFFFE");
   var s = escHtml(cleaned);
+  // Render file-mention pills (from preserved citation tokens)
+  var _ml = (_currentAbstractFileNames && _currentAbstractFileNames.length > 0)
+    ? _currentAbstractFileNames[0].replace(/\.[A-Za-z0-9]{1,10}$/, "") : "Inserted document";
+  var _msvg = '<span class="file-mention-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3.5" width="14" height="17" rx="3" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>';
+  s = s.replace(/\uFFFEFMENTION\uFFFE/g, '<span class="file-mention-pill">' + _msvg + ' \\' + escHtml(_ml) + '</span>');
+  // File path mentions: '/mnt/data/filename' → inline pill
+  s = s.replace(/'?\/mnt\/data\/\\*([^'<\n]+?(?:\.[A-Za-z0-9]{1,10}))'?/g, function(match, fname) {
+    var clean = fname.replace(/^\\+/, '');
+    return '<span class="file-mention-pill">' + _msvg + ' \\' + clean + '</span>';
+  });
   // Image placeholders — [🖼 description] markers from export
   s = s.replace(/\[🖼\s*([^\]]*)\]/g, '<div class="img-placeholder"><svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="rgba(212,165,116,0.1)"/><path d="M10 24l5-7 4 5 3-4 4 6H10z" fill="rgba(212,165,116,0.3)"/><circle cx="23" cy="14" r="3" fill="rgba(212,165,116,0.3)"/></svg><span>$1<br><span style="font-size:0.72rem;color:var(--text-faint);">Image not included in export</span></span></div>');
   // Headers
@@ -1335,10 +1494,15 @@ function renderMarkdown(text) {
   s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   // Italic
   s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  // Inline code
-  s = s.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;font-size:0.88em;">$1</code>');
-  // Code blocks
-  s = s.replace(/```[\w]*\n([\s\S]*?)```/g, '<pre style="background:rgba(0,0,0,0.3);padding:10px 12px;border-radius:8px;overflow-x:auto;font-size:0.85em;margin:8px 0;">$1</pre>');
+  // Code blocks with optional language header (must come BEFORE inline code)
+  s = s.replace(/```([\w+-]*)\n([\s\S]*?)```/g, function(match, lang, code) {
+    var header = lang ? '<div class="code-header"><span class="code-lang">' + lang + '</span></div>' : '';
+    return '<div class="code-block">' + header + '<pre>' + code + '</pre></div>';
+  });
+  // Inline code (single backtick)
+  s = s.replace(/`([^`\n]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-size:0.88em;font-family:var(--mono);">$1</code>');
+  // Horizontal rules
+  s = s.replace(/^---$/gm, '<hr class="md-hr">');
   // Lists (- or *)
   s = s.replace(/^[\-\*] (.+)$/gm, '<span style="display:block;padding-left:1.2em;text-indent:-0.8em;">• $1</span>');
   // Numbered lists
@@ -1487,7 +1651,24 @@ function collectAttachedToolCalls(messages, startIndex) {
   return { toolCalls: toolCalls, nextIndex: nextIndex };
 }
 
+function _renderUserAbstractFiles(files) {
+  if (!files || !files.length) return "";
+  var html = '<div class="user-file-stack">';
+  for (var i = 0; i < files.length; i++) {
+    html += '<details class="user-file-card">' +
+      '<summary>' +
+      '<span class="user-file-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3.5" width="14" height="17" rx="3" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>' +
+      '<span class="user-file-meta"><span class="user-file-name">' + escHtml(files[i].name) + '</span><span class="user-file-kind">' + escHtml(files[i].kind || "Document") + '</span></span>' +
+      '</summary>' +
+      '<pre>' + escHtml(files[i].rawText || "") + '</pre>' +
+      '</details>';
+  }
+  html += '</div>';
+  return html;
+}
+
 function getMessagePreviewText(text) {
+  if (text && (text.indexOf("to cite this file") !== -1 || text.indexOf("files uploaded by the user have been fully loaded") !== -1)) return "";
   var toolCall = detectToolCall(text);
   if (toolCall) return "[System: " + toolCall.status + "]";
   return (text || "").replace(/\s+/g, " ").trim();
