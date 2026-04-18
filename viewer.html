@@ -1313,6 +1313,7 @@ function openConversation(id) {
   (function preprocessAbstractFiles() {
     var IDLE = 0, COLLECT = 1, state = IDLE;
     var blockLines = [], lastUserIdx = -1;
+    var collectStartIdx = -1; // track where the current COLLECT block began
     for (var pi = 0; pi < c.messages.length; pi++) {
       var pm = c.messages[pi];
       if (isMetadataMessage(pm)) continue;
@@ -1320,7 +1321,7 @@ function openConversation(id) {
       if (pm.role === "user" && !_startsAF(pt) && !_endsAF(pt)) lastUserIdx = pi;
       if (state === IDLE) {
         if (_startsAF(pt)) {
-          state = COLLECT; blockLines = [];
+          state = COLLECT; blockLines = []; collectStartIdx = pi;
           abstractSkipSet[pi] = true;
           var sl = pt.split(/\r?\n/);
           for (var k = 0; k < sl.length; k++) {
@@ -1331,6 +1332,27 @@ function openConversation(id) {
           if (state === IDLE) _finishAF(pi);
         }
       } else {
+        // If we're in COLLECT but hit a non-tool/non-system message (user or assistant),
+        // the abstract-file block ended without a proper end marker — finalize and stop collecting
+        if (pm.role !== "tool" && pm.role !== "system") {
+          state = IDLE;
+          if (blockLines.length) _finishAF(pi);
+          blockLines = [];
+          // re-process this message in IDLE state
+          if (pm.role === "user" && !_startsAF(pt) && !_endsAF(pt)) lastUserIdx = pi;
+          if (_startsAF(pt)) {
+            state = COLLECT; blockLines = []; collectStartIdx = pi;
+            abstractSkipSet[pi] = true;
+            var sl3 = pt.split(/\r?\n/);
+            for (var k3 = 0; k3 < sl3.length; k3++) {
+              if (_startsAF(sl3[k3])) continue;
+              if (_endsAF(sl3[k3])) { state = IDLE; break; }
+              blockLines.push(sl3[k3]);
+            }
+            if (state === IDLE) _finishAF(pi);
+          }
+          continue;
+        }
         abstractSkipSet[pi] = true;
         if (_endsAF(pt)) { state = IDLE; _finishAF(pi); }
         else {
