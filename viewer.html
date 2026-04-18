@@ -88,6 +88,14 @@
   .message.tool .msg-bubble { background: var(--surface); border: 1px solid var(--border); font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); }
   .thinking-indicator { text-align: center; padding: 6px 0; font-size: 0.78rem; color: var(--text-faint); font-style: italic; }
   .tool-indicator { text-align: center; padding: 6px 14px; margin: 4px auto; font-size: 0.75rem; color: var(--text-faint); font-family: var(--mono); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; max-width: 500px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tool-accordion { max-width: 620px; margin: 8px 0 12px 46px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .tool-accordion summary { list-style: none; cursor: pointer; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; user-select: none; }
+  .tool-accordion summary::-webkit-details-marker { display: none; }
+  .tool-accordion summary::marker { content: ""; }
+  .tool-accordion-label { font-family: var(--mono); font-size: 0.74rem; color: var(--text-dim); }
+  .tool-accordion-hint { font-family: var(--mono); font-size: 0.66rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .tool-accordion[open] .tool-accordion-hint { color: var(--accent); }
+  .tool-accordion pre { margin: 0; padding: 12px 14px 14px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.22); color: var(--text-dim); font-family: var(--mono); font-size: 0.74rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; overflow-x: auto; }
   .msg-time { font-size: 0.68rem; color: var(--text-faint); margin-top: 4px; font-family: var(--mono); }
   .message.user .msg-time { text-align: right; }
   .msg-model { display: inline-block; font-size: 0.65rem; color: var(--gpt); background: var(--gpt-dim); padding: 1px 6px; border-radius: 4px; font-family: var(--mono); margin-left: 8px; vertical-align: middle; }
@@ -162,6 +170,7 @@
     .sidebar { width: 100%; min-width: 100%; position: absolute; z-index: 10; height: 100%; transform: translateX(0); transition: transform 0.2s; }
     .sidebar.hidden { transform: translateX(-100%); }
     .mobile-toggle { display: block !important; }
+    .tool-accordion { margin-left: 0; max-width: 100%; }
   }
   .mobile-toggle { display: none; background: none; border: none; color: var(--text); font-size: 1.2rem; cursor: pointer; padding: 4px 8px; }
 
@@ -949,14 +958,14 @@ function renderConversationList(filter) {
     var preview = "";
     for (var pi = 0; pi < c.messages.length; pi++) {
       if (!isMetadataMessage(c.messages[pi]) && c.messages[pi].role === "user") {
-        preview = c.messages[pi].text.substring(0, 80).replace(/\n/g, " ");
+        preview = getMessagePreviewText(c.messages[pi].text).substring(0, 80);
         break;
       }
     }
     if (!preview && c.messages.length > 0) {
       for (var pi = 0; pi < c.messages.length; pi++) {
         if (!isMetadataMessage(c.messages[pi])) {
-          preview = c.messages[pi].text.substring(0, 80).replace(/\n/g, " ");
+          preview = getMessagePreviewText(c.messages[pi].text).substring(0, 80);
           break;
         }
       }
@@ -1021,7 +1030,7 @@ function openConversation(id) {
     // Special rendering for thinking/reasoning/tool messages
     var isThinking = msgText === "[thinking]";
     var isRecap = msgText.indexOf("[Thought ") === 0 || msgText.indexOf("[Thinking") === 0;
-    var isSearch = msgText.indexOf("[🔍 ") === 0;
+    var toolCall = detectToolCall(msgText);
 
     // Skip standalone thinking markers — they'll merge with the recap below
     if (isThinking) continue;
@@ -1033,10 +1042,8 @@ function openConversation(id) {
       continue;
     }
 
-    // Render search/tool use as a subtle indicator
-    if (isSearch) {
-      var searchText = msgText.replace(/^\[🔍 /, '').replace(/\]$/, '');
-      html += '<div class="tool-indicator">🔍 ' + escHtml(searchText) + '</div>';
+    if (toolCall) {
+      html += renderToolAccordion(toolCall);
       continue;
     }
 
@@ -1314,6 +1321,88 @@ function renderMarkdown(text) {
   // Plain URLs
   s = s.replace(/(^|[^"=])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;word-break:break-all;">$2</a>');
   return s;
+}
+
+function extractFencedBlock(text) {
+  var trimmed = (text || "").trim();
+  var match = trimmed.match(/^```([\w+-]*)\r?\n([\s\S]*?)\r?\n```$/);
+  if (!match) return null;
+  return {
+    language: (match[1] || "").toLowerCase(),
+    body: match[2].trim()
+  };
+}
+
+function looksLikeToolPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  var keys = ["search_query", "image_query", "open", "click", "find", "finance", "weather", "sports", "time"];
+  for (var i = 0; i < keys.length; i++) {
+    if (payload[keys[i]] !== undefined) return true;
+  }
+  return false;
+}
+
+function summarizeToolPayload(payload) {
+  var labels = [];
+  if (payload.search_query && payload.search_query.length) labels.push("Web Search");
+  if (payload.image_query && payload.image_query.length) labels.push("Image Search");
+  if (payload.open && payload.open.length) labels.push("Page Open");
+  if (payload.click && payload.click.length) labels.push("Link Click");
+  if (payload.find && payload.find.length) labels.push("Page Find");
+  if (payload.finance && payload.finance.length) labels.push("Finance Lookup");
+  if (payload.weather && payload.weather.length) labels.push("Weather Lookup");
+  if (payload.sports && payload.sports.length) labels.push("Sports Lookup");
+  if (payload.time && payload.time.length) labels.push("Time Lookup");
+
+  if (!labels.length) return "Backend Logic Executed";
+  if (labels.length === 1) return labels[0] + " Executed";
+  if (labels.length === 2) return labels[0] + " + " + labels[1] + " Executed";
+  return labels[0] + " + " + (labels.length - 1) + " More Executed";
+}
+
+function detectToolCall(text) {
+  var trimmed = (text || "").trim();
+  if (!trimmed) return null;
+
+  if (trimmed.indexOf("[🔍 ") === 0 && trimmed.charAt(trimmed.length - 1) === "]") {
+    return {
+      status: "Web Search Executed",
+      debugText: trimmed.replace(/^\[🔍 /, "").replace(/\]$/, "")
+    };
+  }
+
+  var candidate = null;
+  var block = extractFencedBlock(trimmed);
+  if (block && (block.language === "" || block.language === "json" || block.language === "js" || block.language === "javascript" || block.language === "unknown")) {
+    candidate = block.body;
+  } else if (trimmed.charAt(0) === "{") {
+    candidate = trimmed;
+  }
+  if (!candidate) return null;
+
+  try {
+    var payload = JSON.parse(candidate);
+    if (!looksLikeToolPayload(payload)) return null;
+    return {
+      status: summarizeToolPayload(payload),
+      debugText: JSON.stringify(payload, null, 2)
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+function renderToolAccordion(toolCall) {
+  return '<details class="tool-accordion">' +
+    '<summary><span class="tool-accordion-label">[ System: ' + escHtml(toolCall.status) + ' ]</span><span class="tool-accordion-hint">View JSON</span></summary>' +
+    '<pre>' + escHtml(toolCall.debugText || "") + '</pre>' +
+    '</details>';
+}
+
+function getMessagePreviewText(text) {
+  var toolCall = detectToolCall(text);
+  if (toolCall) return "[System: " + toolCall.status + "]";
+  return (text || "").replace(/\s+/g, " ").trim();
 }
 
 function isMetadataMessage(m) {
