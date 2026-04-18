@@ -1829,14 +1829,18 @@ function renderMarkdown(text) {
   var lines = cleaned.split('\n');
   var resultLines = [];
   var i = 0;
+  var inCodeBlock = false;
   function isPipeRow(l) { return l.trim().charAt(0) === '|' && l.trim().charAt(l.trim().length - 1) === '|'; }
   function isSepRow(l) { return /^\|[-|: ]+\|$/.test(l.trim()); }
   function splitCells(l) { return l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function(c) { return c.trim(); }); }
 
   while (i < lines.length) {
     var line = lines[i];
+    if (line.trim().indexOf('```') === 0) {
+      inCodeBlock = !inCodeBlock;
+    }
     // A table starts with a pipe row followed (within next 1-2 lines) by a separator row
-    if (isPipeRow(line) && i + 1 < lines.length && (isSepRow(lines[i + 1]) || (isPipeRow(lines[i + 1]) && i + 2 < lines.length && isSepRow(lines[i + 2])))) {
+    if (!inCodeBlock && isPipeRow(line) && i + 1 < lines.length && (isSepRow(lines[i + 1]) || (isPipeRow(lines[i + 1]) && i + 2 < lines.length && isSepRow(lines[i + 2])))) {
       var tableLines = [];
       while (i < lines.length && isPipeRow(lines[i])) {
         tableLines.push(lines[i]);
@@ -1893,7 +1897,7 @@ function renderMarkdown(text) {
   s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
   // Code blocks with optional language header (must come BEFORE inline code)
   var _codeBlockIdx = 0;
-  s = s.replace(/```([\w+-]*)\n([\s\S]*?)```/g, function(match, lang, code) {
+  s = s.replace(/^ {0,3}```([\w+-]*)\r?\n([\s\S]*?)\r?\n {0,3}```[ \t]*$/gm, function(match, lang, code) {
     var id = 'cb-' + (++_codeBlockIdx);
     var langLabel = lang ? '<span class="code-lang">' + lang + '</span>' : '<span class="code-lang">text</span>';
     var header = '<div class="code-header">' +
