@@ -96,15 +96,28 @@
 
   /* ===== MAIN CHAT VIEW ===== */
   .chat-header {
-    padding: 16px 28px; border-bottom: 1px solid var(--border);
+    padding: 14px 28px; border-bottom: 1px solid var(--border);
     background: rgba(19,19,26,0.95);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     display: flex; justify-content: space-between; align-items: center; min-height: 62px;
     box-shadow: 0 1px 0 rgba(255,255,255,0.04);
   }
-  .chat-title { font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; letter-spacing: -0.01em; }
-  .chat-meta { font-size: 0.72rem; color: var(--text-faint); font-family: var(--mono); margin-left: 16px; white-space: nowrap; }
+  .chat-title-group { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+  .chat-breadcrumb {
+    display: none; /* hidden until a project is set */
+    align-items: center; gap: 4px;
+    font-size: 0.68rem; font-family: var(--mono);
+    color: var(--green); opacity: 0.8;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    cursor: pointer; width: fit-content;
+    transition: opacity 0.15s;
+  }
+  .chat-breadcrumb:hover { opacity: 1; }
+  .chat-breadcrumb.visible { display: flex; }
+  .chat-breadcrumb-sep { color: var(--text-faint); font-size: 0.6rem; margin: 0 1px; }
+  .chat-title { font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
+  .chat-meta { font-size: 0.72rem; color: var(--text-faint); font-family: var(--mono); margin-left: 16px; white-space: nowrap; flex-shrink: 0; }
   .chat-messages {
     flex: 1; overflow-y: auto; padding: 28px 36px;
     background: var(--chat-bg);
@@ -296,6 +309,23 @@
   .search-result .sr-match mark { background: var(--accent-dim); color: var(--accent); border-radius: 2px; padding: 0 2px; }
   .search-result .sr-meta { font-size: 0.7rem; color: var(--text-faint); margin-top: 6px; font-family: var(--mono); }
 
+  /* ===== MD TABLE ===== */
+  .md-table-wrap { overflow-x: auto; margin: 14px 0; border-radius: var(--radius-md); border: 1px solid var(--border); }
+  .md-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .md-table th {
+    background: var(--surface2); color: var(--text);
+    padding: 8px 14px; text-align: left; font-weight: 600;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  .md-table td {
+    padding: 7px 14px; color: var(--text-dim); vertical-align: top;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    line-height: 1.55;
+  }
+  .md-table tr:last-child td { border-bottom: none; }
+  .md-table tr:hover td { background: rgba(255,255,255,0.02); }
+
   /* ===== EMPTY STATE ===== */
   .empty-chat { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-faint); font-size: 0.9rem; background: var(--chat-bg); }
 
@@ -326,6 +356,49 @@
   .sort-btn { padding: 4px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text-dim); font-size: 0.72rem; font-family: var(--mono); cursor: pointer; transition: all 0.15s; }
   .sort-btn:hover { border-color: var(--accent); color: var(--text); }
   .sort-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  /* ===== PROJECT FILTER ===== */
+  .project-filter-bar { padding: 8px 20px 10px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+  .project-filter-label { font-size: 0.67rem; font-family: var(--mono); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.07em; }
+  .project-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+  .project-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface);
+    font-family: var(--sans); font-size: 0.72rem; color: var(--text-dim);
+    cursor: pointer; transition: all 0.14s; white-space: nowrap; user-select: none;
+  }
+  .project-pill:hover { border-color: var(--green); color: var(--text); }
+  .project-pill.active { background: rgba(110,168,152,0.13); border-color: var(--green); color: var(--green); }
+  .project-pill.all-pill { border-style: dashed; }
+  .project-pill.all-pill.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); border-style: solid; }
+  .project-pill-count { font-family: var(--mono); font-size: 0.65rem; color: var(--text-faint); }
+  .project-pill.active .project-pill-count { color: inherit; opacity: 0.75; }
+
+  /* ===== CONVERSATION LIST GROUPS ===== */
+  .convo-group-header {
+    padding: 6px 20px 4px;
+    display: flex; align-items: center; gap: 7px;
+    font-size: 0.7rem; font-family: var(--mono); font-weight: 600;
+    color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.07em;
+    background: var(--sidebar);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 2;
+  }
+  .convo-group-header .group-icon { font-size: 0.85rem; }
+  .convo-group-header .group-count { font-size: 0.65rem; color: var(--text-faint); margin-left: auto; }
+  .convo-group-named .convo-group-header { color: var(--green); border-left: 2px solid rgba(110,168,152,0.35); }
+  .convo-group-none .convo-group-header { color: var(--text-faint); }
+
+  /* Project badge on convo items */
+  .project-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 1px 7px;
+    background: rgba(110,168,152,0.09); border: 1px solid rgba(110,168,152,0.20);
+    border-radius: 999px;
+    font-size: 0.67rem; color: var(--green); font-family: var(--mono);
+    white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+  }
 </style>
 </head>
 <body>
@@ -382,6 +455,10 @@
           <option value="">All models</option>
         </select>
       </div>
+      <div class="project-filter-bar" id="project-filter-bar" style="display:none;">
+        <div class="project-filter-label">📁 Projects</div>
+        <div class="project-pills" id="project-pills"></div>
+      </div>
       <div class="convo-list" id="convo-list"></div>
     </div>
 
@@ -417,7 +494,10 @@
   <div class="main" id="main-area" style="display:none;">
     <div class="chat-header" id="chat-header">
       <button class="mobile-toggle" id="mobile-toggle" onclick="toggleSidebar()">☰</button>
-      <div class="chat-title" id="chat-title">Select a conversation</div>
+      <div class="chat-title-group">
+        <div class="chat-breadcrumb" id="chat-breadcrumb" title="Filter by this project"></div>
+        <div class="chat-title" id="chat-title">Select a conversation</div>
+      </div>
       <div class="chat-meta" id="chat-meta"></div>
     </div>
     <div class="empty-chat" id="empty-chat">← Pick a conversation from the sidebar</div>
@@ -434,6 +514,7 @@ var memories = [];
 var instructionsData = null;
 var currentSort = "newest";
 var currentModelFilter = "";
+var currentProjectFilter = null; // null = show all (grouped), "" = no-project, string = project name
 var searchTimeout = null;
 var loadedTypes = {};
 var exportFormatVersion = 0; // 0 = unknown/old, 3 = with branches
@@ -732,6 +813,7 @@ function processConversations(content) {
   setupSearch();
   setupSort();
   setupModelFilter();
+  setupProjectFilter();
   loadedTypes.conversations = true;
 }
 
@@ -1085,6 +1167,14 @@ function renderConversationList(filter) {
     });
   }
 
+  // Filter by project
+  if (currentProjectFilter !== null) {
+    sorted = sorted.filter(function(c) {
+      if (currentProjectFilter === "") return !c.project;
+      return c.project === currentProjectFilter;
+    });
+  }
+
   // Filter by text
   if (filter) {
     var f = filter.toLowerCase();
@@ -1093,9 +1183,8 @@ function renderConversationList(filter) {
     });
   }
 
-  var html = "";
-  for (var i = 0; i < sorted.length; i++) {
-    var c = sorted[i];
+  // Helper: build a single convo-item HTML string
+  function buildItem(c, showProjectBadge) {
     var date = formatDate(c.update_time || c.create_time);
     var preview = "";
     for (var pi = 0; pi < c.messages.length; pi++) {
@@ -1112,12 +1201,55 @@ function renderConversationList(filter) {
         }
       }
     }
-    html += '<div class="convo-item" data-id="' + c.id + '" onclick="openConversation(\'' + c.id + '\')">' +
+    var projectBadge = (showProjectBadge && c.project)
+      ? '<div style="margin-top:3px;"><span class="project-badge">📁 ' + escHtml(c.project) + '</span></div>'
+      : '';
+    return '<div class="convo-item" data-id="' + c.id + '" onclick="openConversation(\'' + c.id + '\')">' +
       '<div class="title">' + escHtml(c.title) + (c.hasBranches ? '<span class="branch-badge" title="Has regenerated responses">🔀</span>' : '') + '</div>' +
       '<div class="meta"><span>' + date + '</span><span>' + c.messageCount + ' msgs</span><span class="model">' + escHtml(c.models_used.length > 0 ? c.models_used.join(", ") : c.model) + '</span></div>' +
-      (c.project ? '<div class="meta" style="margin-top:2px;"><span style="color:var(--green);">📁 ' + escHtml(c.project) + '</span></div>' : '') +
+      projectBadge +
       (preview ? '<div class="preview">' + escHtml(preview) + '</div>' : '') +
       '</div>';
+  }
+
+  var html = "";
+
+  // Grouped mode (no project filter active)
+  if (currentProjectFilter === null && !filter) {
+    // Bucket by project
+    var groups = {}; // project name -> []
+    var groupOrder = [];
+    for (var i = 0; i < sorted.length; i++) {
+      var key = sorted[i].project || "";
+      if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
+      groups[key].push(sorted[i]);
+    }
+    // Named projects first (sorted alpha), then no-project
+    var namedKeys = groupOrder.filter(function(k) { return k !== ""; }).sort();
+    var keys = namedKeys;
+    if (groups[""] && groups[""].length > 0) keys = keys.concat("");
+
+    for (var gi = 0; gi < keys.length; gi++) {
+      var gKey = keys[gi];
+      var gItems = groups[gKey];
+      var isNamed = gKey !== "";
+      var groupClass = isNamed ? "convo-group-named" : "convo-group-none";
+      var groupIcon = isNamed ? "📁" : "💬";
+      var groupLabel = isNamed ? escHtml(gKey) : "No Project";
+      html += '<div class="' + groupClass + '">' +
+        '<div class="convo-group-header"><span class="group-icon">' + groupIcon + '</span>' + groupLabel +
+        '<span class="group-count">' + gItems.length + '</span></div>';
+      for (var ii = 0; ii < gItems.length; ii++) {
+        html += buildItem(gItems[ii], false);
+      }
+      html += '</div>';
+    }
+  } else {
+    // Flat mode (project filter active, or text search)
+    var showBadge = (currentProjectFilter === null); // show badge when searching across all
+    for (var i = 0; i < sorted.length; i++) {
+      html += buildItem(sorted[i], filter ? true : false);
+    }
   }
 
   if (!html) html = '<div style="padding:20px;color:var(--text-faint);font-size:0.85rem;">No conversations found.</div>';
@@ -1145,8 +1277,29 @@ function openConversation(id) {
   if (dateStr) metaParts.push(dateStr);
   if (c.model && c.model !== "unknown") metaParts.push(c.model);
   metaParts.push(c.messageCount + " messages");
-  if (c.project) metaParts.push("📁 " + c.project);
   document.getElementById("chat-meta").textContent = metaParts.join(" · ");
+
+  // Project breadcrumb
+  var bc = document.getElementById("chat-breadcrumb");
+  if (c.project) {
+    bc.innerHTML = '📁 <strong style="font-weight:600;">' + escHtml(c.project) + '</strong>' +
+      '<span class="chat-breadcrumb-sep">/</span>';
+    bc.className = "chat-breadcrumb visible";
+    bc.onclick = function() {
+      // Switch sidebar to that project filter
+      var pills = document.querySelectorAll(".project-pill");
+      for (var pi = 0; pi < pills.length; pi++) {
+        var dp = pills[pi].getAttribute("data-project");
+        pills[pi].classList.toggle("active", dp === c.project);
+      }
+      currentProjectFilter = c.project;
+      renderConversationList();
+    };
+  } else {
+    bc.className = "chat-breadcrumb";
+    bc.innerHTML = "";
+    bc.onclick = null;
+  }
 
   // Messages
   var container = document.getElementById("chat-messages");
@@ -1498,6 +1651,63 @@ function setupModelFilter() {
   });
 }
 
+// ===== PROJECT FILTER =====
+function setupProjectFilter() {
+  // Collect distinct project names and counts
+  var projects = {};
+  var noProjectCount = 0;
+  for (var i = 0; i < conversations.length; i++) {
+    var p = conversations[i].project;
+    if (p) {
+      projects[p] = (projects[p] || 0) + 1;
+    } else {
+      noProjectCount++;
+    }
+  }
+  var projectNames = Object.keys(projects).sort();
+
+  // Only show the panel if there's at least one named project
+  var bar = document.getElementById("project-filter-bar");
+  if (projectNames.length === 0) { bar.style.display = "none"; return; }
+  bar.style.display = "flex";
+
+  var pills = document.getElementById("project-pills");
+  var html = '<span class="project-pill all-pill active" data-project="__all__" onclick="setProjectFilter(this)">' +
+    'All <span class="project-pill-count">' + conversations.length + '</span></span>';
+
+  for (var i = 0; i < projectNames.length; i++) {
+    var pName = projectNames[i];
+    html += '<span class="project-pill" data-project="' + escHtml(pName) + '" onclick="setProjectFilter(this)">' +
+      '\uD83D\uDCC1 ' + escHtml(pName) + ' <span class="project-pill-count">' + projects[pName] + '</span></span>';
+  }
+
+  if (noProjectCount > 0) {
+    html += '<span class="project-pill" data-project="__none__" onclick="setProjectFilter(this)">' +
+      '\uD83D\uDCAC No project <span class="project-pill-count">' + noProjectCount + '</span></span>';
+  }
+
+  pills.innerHTML = html;
+}
+
+function setProjectFilter(el) {
+  var raw = el.getAttribute("data-project");
+  // sentinel values: '__all__' → null (grouped), '__none__' → '' (no project), else project name
+  if (raw === "__all__") {
+    currentProjectFilter = null;
+  } else if (raw === "__none__") {
+    currentProjectFilter = "";
+  } else {
+    currentProjectFilter = raw;
+  }
+  // Update pill active states
+  var pills = document.querySelectorAll(".project-pill");
+  for (var i = 0; i < pills.length; i++) {
+    pills[i].classList.remove("active");
+  }
+  el.classList.add("active");
+  renderConversationList();
+}
+
 // ===== MOBILE =====
 function toggleSidebar() {
   document.getElementById("sidebar").classList.toggle("hidden");
@@ -1567,12 +1777,77 @@ function escHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// Inline markdown: bold, italic, code, links, <br> — used for table cells and similar contexts
+function renderInlineMd(text) {
+  var s = escHtml(text);
+  // Literal <br> tags in source
+  s = s.replace(/&lt;br&gt;/gi, '<br>');
+  // Bold
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Italic (not preceded/followed by *)
+  s = s.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+  // Inline code
+  s = s.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>');
+  // Links
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;text-underline-offset:2px;">$1</a>');
+  return s;
+}
+
 function renderMarkdown(text) {
   // Strip OpenAI internal citation markers; unknown ones → mention token
   var cleaned = text
     .replace(/\uE200cite(\uE202turn\dsearch\d+)+\uE201/g, "")
-    .replace(/\uE200image_group\uE202\{[^}]*\}\uE201/g, "[🖼 images]")
+    .replace(/\uE200image_group\uE202\{[^}]*\}\uE201/g, "[\uD83D\uDDBC images]")
     .replace(/\uE200([\s\S]*?)\uE201/g, "\uFFFEFMENTION\uFFFE");
+
+  // ===== TABLE PRE-PASS (on raw text, before escaping) =====
+  // Detect groups of lines that form a Markdown table and replace them with
+  // placeholder tokens so subsequent transforms don't corrupt them.
+  var tableStore = [];
+  var lines = cleaned.split('\n');
+  var resultLines = [];
+  var i = 0;
+  function isPipeRow(l) { return l.trim().charAt(0) === '|' && l.trim().charAt(l.trim().length - 1) === '|'; }
+  function isSepRow(l) { return /^\|[-|: ]+\|$/.test(l.trim()); }
+  function splitCells(l) { return l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function(c) { return c.trim(); }); }
+
+  while (i < lines.length) {
+    var line = lines[i];
+    // A table starts with a pipe row followed (within next 1-2 lines) by a separator row
+    if (isPipeRow(line) && i + 1 < lines.length && (isSepRow(lines[i + 1]) || (isPipeRow(lines[i + 1]) && i + 2 < lines.length && isSepRow(lines[i + 2])))) {
+      var tableLines = [];
+      while (i < lines.length && isPipeRow(lines[i])) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      // Build HTML table
+      var thead = '', tbody = '';
+      var headerRow = null;
+      var bodyRows = [];
+      for (var ti = 0; ti < tableLines.length; ti++) {
+        if (isSepRow(tableLines[ti])) continue; // skip separator
+        if (headerRow === null) { headerRow = splitCells(tableLines[ti]); }
+        else { bodyRows.push(splitCells(tableLines[ti])); }
+      }
+      if (headerRow) {
+        thead = '<thead><tr>' + headerRow.map(function(h) { return '<th>' + renderInlineMd(h) + '</th>'; }).join('') + '</tr></thead>';
+      }
+      if (bodyRows.length) {
+        tbody = '<tbody>' + bodyRows.map(function(row) {
+          return '<tr>' + row.map(function(c) { return '<td>' + renderInlineMd(c) + '</td>'; }).join('') + '</tr>';
+        }).join('') + '</tbody>';
+      }
+      var tIdx = tableStore.length;
+      tableStore.push('<div class="md-table-wrap"><table class="md-table">' + thead + tbody + '</table></div>');
+      resultLines.push('\uFFFETBL' + tIdx + '\uFFFE');
+    } else {
+      resultLines.push(line);
+      i++;
+    }
+  }
+  cleaned = resultLines.join('\n');
+  // ===== END TABLE PRE-PASS =====
+
   var s = escHtml(cleaned);
   // Render file-mention pills (from preserved citation tokens)
   var _ml = (_currentAbstractFileNames && _currentAbstractFileNames.length > 0)
@@ -1584,8 +1859,8 @@ function renderMarkdown(text) {
     var clean = fname.replace(/^\\+/, '');
     return '<span class="file-mention-pill">' + _msvg + ' \\' + clean + '</span>';
   });
-  // Image placeholders — [🖼 description] markers from export
-  s = s.replace(/\[🖼\s*([^\]]*)\]/g, '<div class="img-placeholder"><svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="rgba(212,165,116,0.1)"/><path d="M10 24l5-7 4 5 3-4 4 6H10z" fill="rgba(212,165,116,0.3)"/><circle cx="23" cy="14" r="3" fill="rgba(212,165,116,0.3)"/></svg><span>$1<br><span style="font-size:0.72rem;color:var(--text-faint);">Image not included in export</span></span></div>');
+  // Image placeholders — [\uD83D\uDDBC description] markers from export
+  s = s.replace(/\[\uD83D\uDDBC\s*([^\]]*)\]/g, '<div class="img-placeholder"><svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="rgba(212,165,116,0.1)"/><path d="M10 24l5-7 4 5 3-4 4 6H10z" fill="rgba(212,165,116,0.3)"/><circle cx="23" cy="14" r="3" fill="rgba(212,165,116,0.3)"/></svg><span>$1<br><span style="font-size:0.72rem;color:var(--text-faint);">Image not included in export</span></span></div>');
   // Headers
   s = s.replace(/^### (.+)$/gm, '<strong style="font-size:1.05em;">$1</strong>');
   s = s.replace(/^## (.+)$/gm, '<strong style="font-size:1.1em;">$1</strong>');
@@ -1617,6 +1892,8 @@ function renderMarkdown(text) {
   s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;text-underline-offset:2px;">$1</a>');
   // Plain URLs
   s = s.replace(/(^|[^"=])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;text-underline-offset:2px;word-break:break-all;">$2</a>');
+  // Inject table HTML (replace placeholder tokens with stored table HTML)
+  s = s.replace(/\uFFFETBL(\d+)\uFFFE/g, function(m, idx) { return tableStore[parseInt(idx)] || ''; });
   return s;
 }
 
