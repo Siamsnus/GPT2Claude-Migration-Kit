@@ -96,6 +96,16 @@
   .tool-accordion-hint { font-family: var(--mono); font-size: 0.66rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
   .tool-accordion[open] .tool-accordion-hint { color: var(--accent); }
   .tool-accordion pre { margin: 0; padding: 12px 14px 14px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.22); color: var(--text-dim); font-family: var(--mono); font-size: 0.74rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; overflow-x: auto; }
+  .message-tools { margin-top: 8px; }
+  .message-tools summary { list-style: none; }
+  .message-tools summary::-webkit-details-marker { display: none; }
+  .message-tools summary::marker { content: ""; }
+  .message-tool-pill { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); font-family: var(--mono); font-size: 0.7rem; color: var(--text-faint); user-select: none; }
+  .message-tool-pill:hover { border-color: var(--accent); color: var(--text-dim); }
+  .message-tools[open] .message-tool-pill { border-color: var(--accent); color: var(--accent); background: rgba(212,165,116,0.08); }
+  .message-tool-icon { font-size: 0.82rem; line-height: 1; }
+  .message-tool-panel { margin-top: 10px; display: grid; gap: 8px; }
+  .message-tool-panel .tool-accordion { margin: 0; max-width: 100%; border-radius: 10px; }
   .msg-time { font-size: 0.68rem; color: var(--text-faint); margin-top: 4px; font-family: var(--mono); }
   .message.user .msg-time { text-align: right; }
   .msg-model { display: inline-block; font-size: 0.65rem; color: var(--gpt); background: var(--gpt-dim); padding: 1px 6px; border-radius: 4px; font-family: var(--mono); margin-left: 8px; vertical-align: middle; }
@@ -1010,6 +1020,7 @@ function openConversation(id) {
   var container = document.getElementById("chat-messages");
   var html = "";
   var firstBranchIdx = -1;
+  var pendingToolCalls = [];
 
   for (var i = 0; i < c.messages.length; i++) {
     var m = c.messages[i];
@@ -1043,8 +1054,17 @@ function openConversation(id) {
     }
 
     if (toolCall) {
-      html += renderToolAccordion(toolCall);
+      pendingToolCalls.push(toolCall);
       continue;
+    }
+
+    var attachedToolCalls = [];
+    var trailingToolIndex = i;
+    if (role === "assistant") {
+      var attached = collectAttachedToolCalls(c.messages, i);
+      trailingToolIndex = attached.nextIndex;
+      attachedToolCalls = pendingToolCalls.concat(attached.toolCalls);
+      pendingToolCalls = [];
     }
 
     if (hasAlts && firstBranchIdx === -1) firstBranchIdx = i;
@@ -1065,6 +1085,7 @@ function openConversation(id) {
         html += '<div class="branch-version branch-v-' + (ai + 1) + '" style="display:none;"><div class="msg-bubble branch-alt">' + renderMarkdown(alt.text) + '</div></div>';
       }
       html += '</div>';
+      html += renderMessageToolCalls(attachedToolCalls);
       // Time + model + carousel nav
       html += '<div class="msg-time">' + (time ? time : '') +
         '<span class="msg-model branch-model-0">' + escHtml(m.model || "") + '</span>';
@@ -1078,12 +1099,18 @@ function openConversation(id) {
         '</span></div>';
     } else {
       html += '<div class="msg-bubble">' + renderMarkdown(m.text) + '</div>' +
+        renderMessageToolCalls(attachedToolCalls) +
         '<div class="msg-time">' + (time ? time : '') +
         (m.model && m.role === "assistant" ? '<span class="msg-model">' + escHtml(m.model) + '</span>' : '') +
         '</div>';
     }
 
     html += '</div></div>';
+    if (role === "assistant" && trailingToolIndex > i) i = trailingToolIndex;
+  }
+
+  if (pendingToolCalls.length) {
+    html += renderMessageToolCalls(pendingToolCalls);
   }
 
   container.innerHTML = html;
@@ -1397,6 +1424,67 @@ function renderToolAccordion(toolCall) {
     '<summary><span class="tool-accordion-label">[ System: ' + escHtml(toolCall.status) + ' ]</span><span class="tool-accordion-hint">View JSON</span></summary>' +
     '<pre>' + escHtml(toolCall.debugText || "") + '</pre>' +
     '</details>';
+}
+
+function summarizeToolBatch(toolCalls) {
+  if (!toolCalls || !toolCalls.length) return "Tool Activity";
+
+  var counts = {};
+  var order = [];
+  for (var i = 0; i < toolCalls.length; i++) {
+    var label = (toolCalls[i].status || "Tool Activity").replace(/ Executed$/, "");
+    if (!counts[label]) {
+      counts[label] = 0;
+      order.push(label);
+    }
+    counts[label]++;
+  }
+
+  if (order.length === 1) {
+    var primary = order[0];
+    var count = counts[primary];
+    if (primary === "Web Search") return count === 1 ? "Search Used" : count + " Searches";
+    if (primary === "Page Open") return count === 1 ? "Page Opened" : count + " Pages Opened";
+    if (primary === "Page Find") return count === 1 ? "Page Find" : count + " Page Finds";
+    if (primary === "Image Search") return count === 1 ? "Image Search" : count + " Image Searches";
+    return count === 1 ? primary : count + " Actions";
+  }
+
+  return toolCalls.length + " Tool Actions";
+}
+
+function renderMessageToolCalls(toolCalls) {
+  if (!toolCalls || !toolCalls.length) return "";
+  var html = '<details class="message-tools">';
+  html += '<summary class="message-tool-pill"><span class="message-tool-icon">💡</span><span>' + escHtml(summarizeToolBatch(toolCalls)) + '</span></summary>';
+  html += '<div class="message-tool-panel">';
+  for (var i = 0; i < toolCalls.length; i++) {
+    html += renderToolAccordion(toolCalls[i]);
+  }
+  html += '</div></details>';
+  return html;
+}
+
+function collectAttachedToolCalls(messages, startIndex) {
+  var toolCalls = [];
+  var nextIndex = startIndex;
+
+  for (var i = startIndex + 1; i < messages.length; i++) {
+    var next = messages[i];
+    if (isMetadataMessage(next)) continue;
+
+    var text = next.text || "";
+    if (text === "[thinking]") continue;
+    if (text.indexOf("[Thought ") === 0 || text.indexOf("[Thinking") === 0) break;
+
+    var toolCall = detectToolCall(text);
+    if (!toolCall) break;
+
+    toolCalls.push(toolCall);
+    nextIndex = i;
+  }
+
+  return { toolCalls: toolCalls, nextIndex: nextIndex };
 }
 
 function getMessagePreviewText(text) {
