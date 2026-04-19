@@ -26,16 +26,20 @@ Don't want to read raw JSON? Open **[viewer.html](https://siamsnus.github.io/GPT
 
 **💬 Conversations** — drag `chatgpt_all_conversations.json`
 - Browse all conversations by title and date
+- Group conversations by project in the sidebar
 - Sort by newest, oldest, alphabetical, or longest
 - Filter by model (GPT-4o, GPT-5.2, etc.)
 - Search across all messages instantly
-- Read conversations with rendered markdown and per-message model badges
+- Jump from search results straight to the matched spot in the chat
+- Read conversations with rendered markdown, tables, and per-message model badges
 - Browse regenerated responses with ◀ 1/3 ▶ carousel (use arrow keys!)
+- Use the right-side minimap for live position tracking, hover previews, and quick scrub/top/bottom jumps
 - Project conversations shown with project badge
 - Shared conversations shown with shared badge
 - Archived conversations shown with archived badge
 - Thinking/reasoning indicators from reasoning models
-- Tool use indicators (search queries, code execution)
+- Grouped tool activity indicators (search queries, code execution)
+- Code interpreter runs and uploaded-file references shown as collapsible sections/cards
 
 **🧠 Memories** — drag `chatgpt_memories.md`
 - Browse all memorized facts in a searchable list
@@ -206,14 +210,18 @@ Everything runs in your browser — no data is sent anywhere.
 - Tabbed interface: 💬 Chats · 🧠 Memories · ⚙️ Settings
 - Multi-file drag & drop with auto-detection
 - Search across all messages
+- Search results jump to the matched section
 - Sort by date, name, or length
+- Sidebar project grouping for conversations
 - Filter by model
 - Per-message model badges
+- Chat minimap with live position readout, hover previews, and quick scrub jumps
 - Branch/regeneration carousel with keyboard nav
 - Thinking/reasoning indicators from reasoning models
-- Tool use indicators (search queries, code execution)
+- Grouped tool activity indicators (search queries, code execution)
+- File attachment cards and collapsible code-interpreter sections
 - Project and shared conversation badges
-- Markdown rendering
+- Markdown rendering with tables and improved code blocks
 - Works fully offline
 
 ## Planned features

@@ -1,3 +1,51 @@
+# v2.8 Changelog
+
+## New Features
+
+### 🗺️ Chat Minimap & Jump Navigation
+- Added a right-side chat minimap with hover previews, active-position tracking, and quick top/bottom jumps
+- Minimap markers now map to real message offsets instead of evenly spaced placeholder positions
+- Added hover-reactive scrubbing with a live viewport indicator
+- Unified viewer GOTO behavior so search results and minimap clicks jump to the nearest rendered chat section
+
+### 🗂️ Sidebar Project Grouping
+- Conversations can now be grouped by project in the sidebar instead of appearing only as one flat list
+- README viewer feature list updated to call out project grouping explicitly
+
+### 🧰 Tool Calls, Attachments & Interpreter Runs
+- Tool-call payloads are grouped under the assistant message that triggered them instead of rendering as standalone backend blobs
+- System and tool activity now render as expandable accordions with readable status summaries
+- Multi-message abstract-file payloads collapse into attachment cards on the preceding user message
+- Inline file mention pills render from preserved citation markers and `/mnt/data/...` references
+- Code interpreter runs collapse into expandable "Used tools" sections
+
+### 🧾 Markdown & Code Display Upgrade
+- Added Markdown table rendering support in the standalone viewer
+- Overhauled fenced code blocks with clearer headers, accent-bar styling, and copy-to-clipboard actions
+- Improved inline code rendering, horizontal rule support, and Markdown code-block parsing
+
+### 🎨 Viewer Visual Refresh
+- Shifted the viewer to a more muted enterprise palette with calmer contrast
+- Refined message bubbles, drop zone styling, and code surfaces for easier long-form reading
+
+## Bug Fixes
+
+### 🔧 Viewer Rendering & Navigation Fixes
+- Fixed message rendering edge cases that caused malformed viewer output
+- Updated the Markdown code-block regex to handle previously broken fenced block cases
+- Fixed minimap active-state drift when hidden or collapsed messages changed the number of rendered chat bubbles
+
+## Version Bumps
+- `CHANGELOG.md` release section → v2.8
+- Exporter and bookmarklet version strings unchanged in this pass
+
+## Stats
+- `viewer.html`: 1,234 → 1,983 lines (+749 lines, +61%) across the reviewed `smyhlin` commit range
+- 7 `smyhlin` commits grouped into this release summary
+- Syntax validated ✅
+
+---
+
 # v2.7 Changelog
 
 ## New Features
